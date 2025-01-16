@@ -12,8 +12,10 @@ export default function Navigation() {
 
   return (
     <div>
+      <h1>MissionPossible</h1>
       <a href="/">Strona Główna</a>
-      <a href="/chat">Chat</a>
+      <a href="/tasks">Lista zadań</a>
+      {/* <a href="/calender">Kalendarz</a> */}
       {user ? (
         <>
           <a href="/profile">Profil</a>

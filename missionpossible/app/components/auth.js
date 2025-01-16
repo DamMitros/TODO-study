@@ -1,4 +1,4 @@
-import { auth } from "./../../firebaseConfig";
+import { auth } from "../../firebaseConfig";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -14,7 +14,7 @@ export const registerWithEmail = async (email, password) => {
     await sendEmailVerification(userCredential.user);
     return userCredential.user;
   } catch (error) {
-    console.error("Error registering with email and password", error);
+    console.error("Error rejestrując się z emailem i hasłem", error);
     throw error;
   }
 };
@@ -24,19 +24,19 @@ export const loginWithEmail = async (email, password) => {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     return userCredential.user;
   } catch (error) {
-    console.error("Error logging in with email and password", error);
+    console.error("Error logując się z emailem i hasłem", error);
     throw error;
   }
 };
 
 export const loginWithGoogle = async () => {
-  console.log("Logging in with Google");
+  console.log("Logowanie z google");
   try {
     const provider = new GoogleAuthProvider();
     const userCredential = await signInWithPopup(auth, provider);
     return userCredential.user;
   } catch (error) {
-    console.error("Error logging in with Google", error);
+    console.error("Error logując się z googlem", error);
     throw error;
   }
 };
@@ -47,7 +47,7 @@ export const loginWithFacebook = async () => {
     const userCredential = await signInWithPopup(auth, provider);
     return userCredential.user;
   } catch (error) {
-    console.error("Error logging in with Facebook", error);
+    console.error("Error logując się z facebookiem", error);
     throw error;
   }
 };
