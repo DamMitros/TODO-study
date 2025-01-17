@@ -1,26 +1,78 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from "react";
-import { collection, addDoc, updateDoc, deleteDoc, onSnapshot, doc, query } from "firebase/firestore";
+import { collection, addDoc, updateDoc, deleteDoc, onSnapshot, doc, query, where } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
+import { useUser } from "./UserContext";
+import { useProjects } from "./ProjectContext";
 
 const TaskContext = createContext();
 
 export const TaskProvider = ({ children }) => {
   const [tasks, setTasks] = useState([]);
+  const { user } = useUser();
+  const { projects } = useProjects();
 
   useEffect(() => {
-    const q = query(collection(db, "tasks"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const tasksData = snapshot.docs.map(doc => ({
+    if (!user) return;
+
+    const ownerQuery = query(collection(db, "tasks"), where('userId', '==', user.uid));
+    const sharedQuery = query(collection(db, "tasks"),where('sharedWith', 'array-contains', user.email));
+    const userProjects = projects.filter(project => project.members && project.members.includes(user.email));
+    
+    let unsubscribeProject = () => {};
+    
+    if (userProjects.length > 0) {
+      const projectQuery = query(collection(db, "tasks"),
+        where('projectId', 'in', userProjects.map(p => p.id)));
+
+      unsubscribeProject = onSnapshot(projectQuery, (snapshot) => {
+        const projectTaskData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setTasks(prev => {
+          const combined = [...prev];
+          projectTaskData.forEach(projectTask => {
+            if (!combined.find(t => t.id === projectTask.id)) {
+              combined.push(projectTask);
+            }
+          });
+          return combined;
+        });
+      });
+    }
+
+    const unsubscribeOwner = onSnapshot(ownerQuery, (snapshot) => {
+      const taskData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-      setTasks(tasksData);
+      setTasks(taskData);
     });
 
-    return () => unsubscribe();
-  }, []);
+    const unsubscribeShared = onSnapshot(sharedQuery, (snapshot) => {
+      const sharedTaskData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setTasks(prev => {
+        const combined = [...prev];
+        sharedTaskData.forEach(sharedTask => {
+          if (!combined.find(t => t.id === sharedTask.id)) {
+            combined.push(sharedTask);
+          }
+        });
+        return combined;
+      });
+    });
+
+    return () => {
+      unsubscribeOwner();
+      unsubscribeShared();
+      unsubscribeProject();
+    };
+  }, [user, projects]);
 
   const addTask = async (task) => {
     await addDoc(collection(db, "tasks"), task);

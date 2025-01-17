@@ -4,10 +4,12 @@ import { useRouter } from "next/navigation";
 import { useTasks } from "../context/TaskContext";
 import { useState, useEffect } from "react";
 import { useUser } from "../context/UserContext";
+import { useProjects } from "../context/ProjectContext"; 
 
 export default function TaskList() {
   const { tasks, toggleTaskCompletion } = useTasks();
   const { user } = useUser();
+  const { projects } = useProjects(); 
   const router = useRouter();
   const [showCompleted, setShowCompleted] = useState(false);
   const [sortBy, setSortBy] = useState('deadline'); 
@@ -15,6 +17,8 @@ export default function TaskList() {
   const [isClient, setIsClient] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchCategory, setSearchCategory] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
+  const [projectFilter, setProjectFilter] = useState('all');
 
   useEffect(() => {
     setIsClient(true);
@@ -77,15 +81,21 @@ export default function TaskList() {
         (searchCategory === 'description' && task.description && task.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (searchCategory === 'location' && task.location && task.location.toLowerCase().includes(searchTerm.toLowerCase()));
 
-      return matchesSearch && matchesCategory;
+      const matchesPriority = priorityFilter === 'all' || 
+        task.importance === parseInt(priorityFilter);
+
+      const matchesProject = projectFilter === 'all' || task.projectId === projectFilter;
+
+      return matchesSearch && matchesCategory && matchesPriority && matchesProject;
     });
   };
 
   const userTasks = sortTasks(
     filterTasks(
-      tasks
-        .filter(task => task.userId === user.uid)
-        .filter(task => task.completed === showCompleted)
+      tasks.filter(task => 
+        task.userId === user.uid || 
+        (task.sharedWith && task.sharedWith.includes(user.email))
+      ).filter(task => task.completed === showCompleted)
     )
   );
 
@@ -130,6 +140,34 @@ export default function TaskList() {
         <button onClick={() => setShowCompleted(!showCompleted)}>
           {showCompleted ? 'Pokaż aktywne zadania' : 'Pokaż wykonane zadania'}
         </button>
+      </div>
+
+      <div>
+        <select
+          value={priorityFilter}
+          onChange={(e) => setPriorityFilter(e.target.value)}
+        >
+          <option value="all">Wszystkie priorytety</option>
+          <option value="5">Krytyczny</option>
+          <option value="4">Wysoki</option>
+          <option value="3">Średni</option>
+          <option value="2">Niski</option>
+          <option value="1">Najniższy</option>
+        </select>
+      </div>
+
+      <div>
+        <select
+          value={projectFilter}
+          onChange={(e) => setProjectFilter(e.target.value)}
+        >
+          <option value="all">Wszystkie projekty</option>
+          {projects.map(project => (
+            <option key={project.id} value={project.id}>
+              {project.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       {userTasks.length === 0 ? (

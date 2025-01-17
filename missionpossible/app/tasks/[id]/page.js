@@ -7,28 +7,33 @@ import { useUser } from "../../context/UserContext";
 
 export default function TaskDetail() {
   const { tasks, deleteTask, editTask } = useTasks();
+  const [canEdit, setCanEdit] = useState(false);
+  const [task, setTask] = useState(null);
   const { user } = useUser();
   const router = useRouter();
   const params = useParams(); 
   const id = params.id; 
   
-  const [task, setTask] = useState(null);
-
   useEffect(() => {
     if (!user) {
       router.push('/login');
       return;
     }
-
     if (id) {
       const foundTask = tasks.find((t) => t.id === id);
-      if (foundTask && foundTask.userId === user.uid) {
+      if (foundTask && (foundTask.userId === user.uid || 
+          (foundTask.sharedWith && foundTask.sharedWith.includes(user.email)))) {
         setTask(foundTask);
+        setCanEdit(true);
       } else {
         router.push('/tasks');
       }
     }
   }, [id, tasks, user, router]);
+
+  if (!user) {
+    return <p>Przekierowywanie do strony logowania...</p>;
+  }
 
   if (!task) {
     return <p>Ładowanie zadania...</p>;
@@ -52,6 +57,8 @@ export default function TaskDetail() {
     await editTask(task.id, updatedTask);
     setTask(updatedTask);
   };
+
+  const isOwner = user && task && task.userId === user.uid;
 
   return (
     <div>
@@ -78,12 +85,17 @@ export default function TaskDetail() {
       <button onClick={handleToggleCompletion}>
         {task.completed ? 'Oznacz jako niewykonane' : 'Oznacz jako wykonane'}
       </button>
-      
       {task.completedAt && (
         <p><strong>Wykonano:</strong> {new Date(task.completedAt).toLocaleDateString()}</p>
       )}
-      <button onClick={handleEdit}>Edytuj zadanie</button>
-      <button onClick={handleDelete}>Usuń zadanie</button>
+      {canEdit && (
+        <>
+          <button onClick={handleEdit}>Edytuj zadanie</button>
+          {isOwner && (
+            <button onClick={handleDelete}>Usuń zadanie</button>
+          )}
+        </>
+      )}
     </div>
   );
 }

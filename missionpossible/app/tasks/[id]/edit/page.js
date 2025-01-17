@@ -23,13 +23,18 @@ export default function EditTaskPage() {
 
     if (id) {
       const foundTask = tasks.find((t) => t.id === id);
-      if (foundTask && foundTask.userId === user.uid) {
+      if (foundTask && (foundTask.userId === user.uid || 
+          (foundTask.sharedWith && foundTask.sharedWith.includes(user.email)))) {
         setTask(foundTask);
       } else {
         router.push('/tasks');
       }
     }
   }, [id, tasks, user, router]);
+
+  if (!user) {
+    return <p>Przekierowywanie do strony logowania...</p>;
+  }
 
   if (!task) {
     return <p>Ładowanie zadania...</p>;
@@ -39,10 +44,16 @@ export default function EditTaskPage() {
     router.push(`/tasks/${id}`);
   };
 
+  const isOwner = user && task && task.userId === user.uid;
+
   return (
     <div>
       <h1>Edycja zadania</h1>
-      <TaskEditForm task={task} onCancelEdit={handleCancelEdit} />
+      <TaskEditForm 
+        task={task} 
+        onCancelEdit={handleCancelEdit}
+        isOwner={isOwner}
+      />
     </div>
   );
 }

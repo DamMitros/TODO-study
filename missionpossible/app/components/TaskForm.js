@@ -5,11 +5,52 @@ import { useFormik } from "formik";
 import * as Yup from "yup";
 import { useTasks } from "../context/TaskContext";
 import { useUser } from "../context/UserContext";
+import { useProjects } from "../context/ProjectContext";
 
 export default function TaskForm() {
   const { addTask } = useTasks();
   const { user } = useUser();
+  const { projects } = useProjects();
   const [dateRange, setDateRange] = useState(false);
+  const [sharedWithEmail, setSharedWithEmail] = useState('');
+  const [notification, setNotification] = useState(null);
+  const showNotification = (message, type) => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 5000);
+  };
+
+  const handleSubmit = async (values) => {
+    if (!user) return;
+    try {
+      let sharedWithUsers = [...values.sharedWith];
+      if (values.projectId) {
+        const selectedProject = projects.find(p => p.id === values.projectId);
+        if (selectedProject && selectedProject.members) {
+          sharedWithUsers = [...new Set([
+            ...sharedWithUsers,
+            ...selectedProject.members.filter(member => member !== user.email)
+          ])];
+        }
+      }
+
+      const task = {
+        ...values,
+        userId: user.uid,
+        createdAt: new Date().toISOString(),
+        deadline: dateRange ? `${values.deadlineStart} do ${values.deadlineEnd}` : values.deadline,
+        executionProgress: Number(values.executionProgress),
+        sharedWith: sharedWithUsers,
+        projectId: values.projectId,
+      };
+      await addTask(task);
+      formik.resetForm();
+      setSharedWithEmail('');
+      showNotification("Zadanie zostało utworzone i udostępnione członkom projektu", "success");
+    } catch (error) {
+      console.error("Error przy dodawaniu zadania:", error);
+      showNotification("Wystąpił błąd podczas tworzenia zadania", "error");
+    }
+  };
 
   const formik = useFormik({
     initialValues: {
@@ -23,7 +64,9 @@ export default function TaskForm() {
       deadlineEnd: "",
       completed: false,
       completedAt: null,
-      executionProgress: 0, 
+      executionProgress: 0,
+      projectId: "",
+      sharedWith: [],
     },
     validationSchema: Yup.object({
       title: Yup.string().required("Tytuł jest wymagany"),
@@ -44,25 +87,54 @@ export default function TaskForm() {
       executionProgress: Yup.number()
         .required("Postęp wykonania jest wymagany")
         .min(0, "Minimum to 0%")
-        .max(100, "Maximum to 100%")
+        .max(100, "Maximum to 100%"),
+      projectId: Yup.string(),
+      sharedWith: Yup.array().of(Yup.string().email()),
     }),
-    onSubmit: async (values) => {
-      if (!user) return;
-      try {
-        const task = {
-          ...values,
-          userId: user.uid,
-          createdAt: new Date().toISOString(),
-          deadline: dateRange ? `${values.deadlineStart} do ${values.deadlineEnd}` : values.deadline,
-          executionProgress: Number(values.executionProgress), 
-        };
-        await addTask(task);
-        formik.resetForm();
-      } catch (error) {
-        console.error("Error przy dodawaniu zadania:", error);
+    onSubmit: handleSubmit
+  });
+
+  const handleShare = async () => {
+    if (!sharedWithEmail) return;
+
+    if (formik.values.projectId) {
+      const selectedProject = projects.find(p => p.id === formik.values.projectId);
+      if (selectedProject) {
+        if (selectedProject.members.includes(sharedWithEmail)) {
+          showNotification(
+            "Ta osoba jest już członkiem projektu i automatycznie będzie miała dostęp do zadania.",
+            "info"
+          );
+          if (!formik.values.sharedWith.includes(sharedWithEmail)) {
+            formik.setFieldValue('sharedWith', [...formik.values.sharedWith, sharedWithEmail]);
+          }
+          setSharedWithEmail('');
+          return;
+        } else {
+          const addToProject = window.confirm(
+            "Ta osoba nie jest członkiem wybranego projektu. Czy chcesz dodać ją do projektu?"
+          );
+          if (addToProject) {
+            formik.setFieldValue('sharedWith', [...formik.values.sharedWith, sharedWithEmail]);
+          } else {
+            const removeProject = window.confirm(
+              "Czy chcesz usunąć zadanie z projektu?"
+            );
+            if (removeProject) {
+              formik.setFieldValue('projectId', '');
+            } else {
+              return;
+            }
+          }
+        }
       }
     }
-  });
+
+    if (!formik.values.sharedWith.includes(sharedWithEmail)) {
+      formik.setFieldValue('sharedWith', [...formik.values.sharedWith, sharedWithEmail]);
+    }
+    setSharedWithEmail('');
+  };
 
   if (!user) {
     return <p>Musisz być zalogowany, aby dodać nowe zadanie.</p>;
@@ -173,6 +245,65 @@ export default function TaskForm() {
             value={formik.values.executionProgress} 
           />
         </label>
+      </div>
+
+      {notification && (
+        <div>
+          {notification.message}
+        </div>
+      )}
+
+      <div>
+        <h3>Projekt</h3>
+        <select
+          name="projectId"
+          onChange={formik.handleChange}
+          value={formik.values.projectId}
+        >
+          <option value="">Brak projektu</option>
+          {projects.map(project => (
+            <option key={project.id} value={project.id}>
+              {project.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <h3>Udostępnij</h3>
+        <div>
+          <input
+            type="email"
+            placeholder="Email osoby"
+            value={sharedWithEmail}
+            onChange={(e) => setSharedWithEmail(e.target.value)}
+          />
+          <button type="button" onClick={handleShare}>
+            Dodaj
+          </button>
+        </div>
+
+        {formik.values.sharedWith.length > 0 && (
+          <div>
+            <h4>Udostępniono dla:</h4>
+            {formik.values.sharedWith.map((email, index) => (
+              <div key={index}>
+                {email}
+                <button
+                  type="button"
+                  onClick={() => {
+                    formik.setFieldValue(
+                      'sharedWith',
+                      formik.values.sharedWith.filter((_, i) => i !== index)
+                    );
+                  }}
+                >
+                  Usuń
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <button type="submit">Dodaj zadanie</button>

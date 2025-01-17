@@ -15,7 +15,8 @@ export default function Navigation() {
       <h1>MissionPossible</h1>
       <a href="/">Strona Główna</a>
       <a href="/tasks">Lista zadań</a>
-      {/* <a href="/calender">Kalendarz</a> */}
+      <a href="/myprojects">Moje Projekty</a>
+      <a href="/calender">Kalendarz</a>
       {user ? (
         <>
           <a href="/profile">Profil</a>

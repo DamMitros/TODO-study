@@ -1,6 +1,7 @@
 "use client";
 
 import { useUser } from "../context/UserContext";
+import TaskDataManager from '../components/TaskDataManager';
 
 export default function ProfilePage() {
   const { user } = useUser();
@@ -23,6 +24,7 @@ export default function ProfilePage() {
         <li>Created At: {user.createdAt}</li>
         <li>Last Login At: {user.lastLoginAt}</li>
       </ul>
+      <TaskDataManager />
     </div>
   );
 }

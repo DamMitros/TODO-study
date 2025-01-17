@@ -3,9 +3,69 @@
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { useTasks } from "../context/TaskContext";
+import { useProjects } from '../context/ProjectContext';
+import { useState } from 'react';
+import { useUser } from '../context/UserContext';
+import { useRouter } from 'next/navigation';
 
-export default function TaskEditForm({ task, onCancelEdit }) {
+export default function TaskEditForm({ task, onCancelEdit, isOwner }) {
   const { editTask } = useTasks();
+  const { projects } = useProjects();
+  const { user } = useUser();
+  const router = useRouter();
+  const [sharedWithEmail, setSharedWithEmail] = useState('');
+  const [notification, setNotification] = useState(null);
+  const showNotification = (message, type) => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 5000);
+  };
+
+  const handleShare = async () => {
+    if (sharedWithEmail && !formik.values.sharedWith.includes(sharedWithEmail)) {
+      try {
+        const updatedSharedWith = [...formik.values.sharedWith, sharedWithEmail];
+        await editTask(task.id, {
+          ...task,
+          sharedWith: updatedSharedWith
+        });
+        formik.setFieldValue('sharedWith', updatedSharedWith);
+        setSharedWithEmail('');
+      } catch (error) {
+        console.error("Error udostępniając taska:", error);
+      }
+    }
+  };
+
+  const handleSubmit = async (values) => {
+    try {
+      let sharedWithUsers = [...values.sharedWith];
+      if (isOwner && values.projectId) {
+        const selectedProject = projects.find(p => p.id === values.projectId);
+        if (selectedProject && selectedProject.members) {
+          sharedWithUsers = [...new Set([
+            ...sharedWithUsers,
+            ...selectedProject.members.filter(member => member !== user.email)
+          ])];
+        }
+      }
+
+      const updatedTask = {
+        ...task,
+        ...values,
+        projectId: isOwner ? values.projectId : task.projectId, 
+        sharedWith: sharedWithUsers,
+        updatedAt: new Date().toISOString()
+      };
+      
+      await editTask(task.id, updatedTask);
+      showNotification("Zadanie zostało zaktualizowane", "success");
+      router.push(`/tasks/${task.id}`); 
+    } catch (error) {
+      console.error("Error modyfikując zadanie:", error);
+      showNotification("Wystąpił błąd podczas aktualizacji zadania", "error");
+    }
+  };
+
   const formik = useFormik({
     initialValues: {
       title: task.title || "",
@@ -16,6 +76,8 @@ export default function TaskEditForm({ task, onCancelEdit }) {
       deadline: task.deadline || "",
       details: task.details || "",
       executionProgress: typeof task.executionProgress === 'number' ? task.executionProgress : 0,
+      sharedWith: task.sharedWith || [],
+      projectId: task.projectId || '',
     },
     validationSchema: Yup.object({
       title: Yup.string().required("Tytuł jest wymagany"),
@@ -26,24 +88,13 @@ export default function TaskEditForm({ task, onCancelEdit }) {
       repeat: Yup.string(),
       details: Yup.string(),
       executionProgress: Yup.number().min(0).max(100).required("Postęp wykonania jest wymagany"),
+      sharedWith: Yup.array().of(Yup.string().email()),
+      projectId: Yup.string(),
     }),
-    onSubmit: async (values) => {
-      try {
-        const updatedTask = {
-          ...task,
-          ...values,
-          details: values.details || null,
-          executionProgress: Number(values.executionProgress),
-          updatedAt: new Date().toISOString()
-        };
-        
-        await editTask(updatedTask.id, updatedTask);
-        onCancelEdit();
-      } catch (error) {
-        console.error("Error modyfikując zadanie:", error);
-      }
-    },
+    onSubmit: handleSubmit,
   });
+
+  const currentProject = projects.find(p => p.id === formik.values.projectId);
 
   return (
     <form onSubmit={formik.handleSubmit}>
@@ -145,11 +196,70 @@ export default function TaskEditForm({ task, onCancelEdit }) {
 
       </div>
 
+      {isOwner && (
+        <div>
+          <h3>Udostępnianie</h3>
+          <input
+            type="email"
+            placeholder="Dodaj użytkownika (email)"
+            value={sharedWithEmail}
+            onChange={(e) => setSharedWithEmail(e.target.value)}
+          />
+          <button type="button" onClick={handleShare}> Dodaj</button>
+          
+          <div>
+            <h4>Udostępniono dla:</h4>
+            {formik.values.sharedWith.map((email, index) => (
+              <div key={index}>
+                {email}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const newSharedWith = formik.values.sharedWith.filter((_, i) => i !== index);
+                    await editTask(task.id, {
+                      ...task,
+                      sharedWith: newSharedWith
+                    });
+                    formik.setFieldValue('sharedWith', newSharedWith);
+                  }}
+                >
+                  Usuń
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div>
+        <h3>Projekt</h3>
+        {isOwner ? (
+          <select value={formik.values.projectId} onChange={formik.handleChange} name="projectId" >
+            <option value="">Brak projektu</option>
+            {projects.map(project => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <div>
+            {currentProject ? (
+              <>
+                <p><strong>Nazwa projektu:</strong> {currentProject.name}</p>
+                <p><strong>Właściciel:</strong> {task.userId === currentProject.createdBy ? "Tak" : "Nie"}</p>
+                <p><strong>Liczba członków:</strong> {currentProject.members?.length || 0}</p>
+              </>
+            ) : (
+              <p>Brak przypisanego projektu</p>
+            )}
+          </div>
+        )}
+      </div>
+
       <div>
         <button type="submit">Zapisz zmiany</button>
-        <button type="button" onClick={onCancelEdit}>
-          Anuluj
-        </button>
+        <button type="button" onClick={onCancelEdit}>Anuluj</button>
       </div>
     </form>
   );
