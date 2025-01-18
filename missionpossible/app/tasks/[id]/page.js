@@ -4,9 +4,13 @@ import { useParams, useRouter } from "next/navigation";
 import { useTasks } from "../../context/TaskContext";
 import { useEffect, useState } from "react";
 import { useUser } from "../../context/UserContext";
+import TaskComments from '../../components/TaskComments';
+import { CommentProvider } from '../../context/CommentContext';
+import PersonalNotes from '../../components/PersonalNotes';
+import { NoteProvider } from '../../context/NoteContext';
 
 export default function TaskDetail() {
-  const { tasks, deleteTask, editTask } = useTasks();
+  const { tasks, deleteTask, editTask, leaveTask } = useTasks();
   const [canEdit, setCanEdit] = useState(false);
   const [task, setTask] = useState(null);
   const { user } = useUser();
@@ -58,6 +62,13 @@ export default function TaskDetail() {
     setTask(updatedTask);
   };
 
+  const handleLeaveTask = async () => {
+    if (window.confirm('Czy na pewno chcesz opuścić to zadanie?')) {
+      await leaveTask(task.id);
+      router.push('/tasks');
+    }
+  };
+
   const isOwner = user && task && task.userId === user.uid;
 
   return (
@@ -91,11 +102,19 @@ export default function TaskDetail() {
       {canEdit && (
         <>
           <button onClick={handleEdit}>Edytuj zadanie</button>
-          {isOwner && (
+          {isOwner ? (
             <button onClick={handleDelete}>Usuń zadanie</button>
+          ) : (
+            <button onClick={handleLeaveTask}>Opuść zadanie</button>
           )}
         </>
       )}
+      <CommentProvider>
+        <TaskComments taskId={task.id} />
+      </CommentProvider>
+      <NoteProvider>
+        <PersonalNotes entityId={task.id} entityType="task" />
+      </NoteProvider>
     </div>
   );
 }

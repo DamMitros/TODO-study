@@ -1,17 +1,47 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from "react";
-import { collection, addDoc, updateDoc, deleteDoc, onSnapshot, doc, query, where } from "firebase/firestore";
+import { collection, addDoc, updateDoc, deleteDoc, onSnapshot, doc, query, where, getDocs, getDoc } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 import { useUser } from "./UserContext";
-import { useProjects } from "./ProjectContext";
+import { useProjects } from "./ProjectContext"; 
 
 const TaskContext = createContext();
 
-export const TaskProvider = ({ children }) => {
+export function TaskProvider({ children }) {
   const [tasks, setTasks] = useState([]);
   const { user } = useUser();
-  const { projects } = useProjects();
+  const { projects } = useProjects(); 
+  const sendNotification = async (task, action) => {
+    if (!user || !task) return;
+    
+    try {
+      const usersToNotify = new Set(task.sharedWith || []);
+      usersToNotify.delete(user.email); 
+
+      const messages = {
+        created: 'zostało utworzone',
+        updated: 'zostało zaktualizowane',
+        deleted: 'zostało usunięte',
+        shared: 'zostało udostępnione'
+      };
+
+      for (const recipientEmail of usersToNotify) {
+        await addDoc(collection(db, 'notifications'), {
+          userId: recipientEmail,
+          taskId: task.id,
+          type: 'task',
+          title: task.title,
+          message: `Zadanie ${messages[action]} przez ${user.email}`,
+          timestamp: new Date().toISOString(),
+          read: false
+        });
+      }
+
+    } catch (error) {
+      console.error("Error wysyłając powiadomienia(Task):", error);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -74,18 +104,48 @@ export const TaskProvider = ({ children }) => {
     };
   }, [user, projects]);
 
-  const addTask = async (task) => {
-    await addDoc(collection(db, "tasks"), task);
+  const addTask = async (taskData) => {
+    try {
+      const docRef = await addDoc(collection(db, 'tasks'), {
+        ...taskData,
+        userId: user.uid,
+        createdAt: new Date().toISOString()
+      });
+      await sendNotification({
+        ...taskData,
+        id: docRef.id
+      }, 'created');
+    } catch (error) {
+      console.error('Error dodając taska:', error);
+    }
   };
 
-  const editTask = async (id, updatedTask) => {
-    const taskRef = doc(db, "tasks", id);
-    await updateDoc(taskRef, updatedTask);
+  const updateTask = async (taskId, taskData) => {
+    try {
+      const taskRef = doc(db, 'tasks', taskId);
+      const taskSnapshot = await getDoc(taskRef);
+      const oldTaskData = taskSnapshot.data();
+      await updateDoc(taskRef, taskData);
+      await sendNotification({
+        ...oldTaskData,
+        ...taskData,
+        id: taskId
+      }, 'updated');
+    } catch (error) {
+      console.error('Error aktualizując taska:', error);
+    }
   };
 
-  const deleteTask = async (id) => {
-    const taskRef = doc(db, "tasks", id);
-    await deleteDoc(taskRef);
+  const deleteTask = async (taskId) => {
+    try {
+      const taskRef = doc(db, 'tasks', taskId);
+      const taskSnapshot = await getDoc(taskRef);
+      const taskData = taskSnapshot.data();
+      await sendNotification({ ...taskData, id: taskId }, 'deleted');
+      await deleteDoc(taskRef);
+    } catch (error) {
+      console.error('Error usuwając taska:', error);
+    }
   };
 
   const toggleTaskCompletion = async (taskId) => {
@@ -96,7 +156,35 @@ export const TaskProvider = ({ children }) => {
         completed: !task.completed,
         completedAt: !task.completed ? new Date().toISOString() : null
       };
-      await editTask(taskId, updatedTask);
+      await updateTask(taskId, updatedTask);
+    }
+  };
+
+  const leaveTask = async (taskId) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const updatedSharedWith = task.sharedWith.filter(email => email !== user.email);
+    await updateTask(taskId, {
+      ...task,
+      sharedWith: updatedSharedWith
+    });
+  };
+
+  const editTask = async (taskId, taskData) => {
+    try {
+      const taskRef = doc(db, 'tasks', taskId);
+      const taskSnapshot = await getDoc(taskRef);
+      const oldTaskData = taskSnapshot.data();
+      await updateDoc(taskRef, taskData);
+      await sendNotification({
+        ...oldTaskData,
+        ...taskData,
+        id: taskId
+      }, 'updated');
+    } catch (error) {
+      console.error('Error aktualizując taska:', error);
+      throw error;
     }
   };
 
@@ -104,13 +192,14 @@ export const TaskProvider = ({ children }) => {
     <TaskContext.Provider value={{ 
       tasks, 
       addTask, 
-      editTask, 
       deleteTask,
-      toggleTaskCompletion 
+      updateTask: editTask, 
+      toggleTaskCompletion,
+      leaveTask 
     }}>
       {children}
     </TaskContext.Provider>
   );
-};
+}
 
 export const useTasks = () => useContext(TaskContext);

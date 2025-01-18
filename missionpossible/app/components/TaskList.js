@@ -99,6 +99,11 @@ export default function TaskList() {
     )
   );
 
+  const userProjects = projects.filter(project => 
+    project.createdBy === user.uid || 
+    (project.members && project.members.includes(user.email))
+  );
+
   return (
     <div>
       <h2>Lista zadań</h2>
@@ -162,7 +167,7 @@ export default function TaskList() {
           onChange={(e) => setProjectFilter(e.target.value)}
         >
           <option value="all">Wszystkie projekty</option>
-          {projects.map(project => (
+          {userProjects.map(project => (
             <option key={project.id} value={project.id}>
               {project.name}
             </option>

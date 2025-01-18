@@ -2,6 +2,7 @@
 
 import { useUser } from "../context/UserContext";
 import TaskDataManager from '../components/TaskDataManager';
+import NotificationHistory from '../components/NotificationHistory';
 
 export default function ProfilePage() {
   const { user } = useUser();
@@ -24,6 +25,9 @@ export default function ProfilePage() {
         <li>Created At: {user.createdAt}</li>
         <li>Last Login At: {user.lastLoginAt}</li>
       </ul>
+      <div>
+        <NotificationHistory />
+      </div>
       <TaskDataManager />
     </div>
   );

@@ -4,9 +4,11 @@ import { useState } from 'react';
 import { useProjects } from '../context/ProjectContext';
 import { useUser } from '../context/UserContext';
 import ProjectForm from '../components/ProjectForm';
+import PersonalNotes from '../components/PersonalNotes';
+import { NoteProvider } from '../context/NoteContext';
 
 export default function ProjectsPage() {
-  const { projects } = useProjects();
+  const { projects, deleteProject, leaveProject } = useProjects();
   const { user } = useUser();
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -26,6 +28,12 @@ export default function ProjectsPage() {
       member.toLowerCase().includes(searchTerm.toLowerCase())
     ))
   );
+
+  const handleLeaveProject = async (projectId) => {
+    if (window.confirm('Czy na pewno chcesz opuścić ten projekt?')) {
+      await leaveProject(projectId);
+    }
+  };
 
   return (
     <div>
@@ -69,6 +77,14 @@ export default function ProjectsPage() {
                   ))}
                 </ul>
               </div>
+              {project.createdBy === user.uid ? (
+                <button onClick={() => deleteProject(project.id)}>Usuń projekt</button>
+              ) : (
+                <button onClick={() => handleLeaveProject(project.id)}> Opuść projekt</button>
+              )}
+              <NoteProvider>
+                <PersonalNotes entityId={project.id} entityType="project" />
+              </NoteProvider>
             </div>
           ))
         )}

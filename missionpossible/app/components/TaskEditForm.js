@@ -9,7 +9,7 @@ import { useUser } from '../context/UserContext';
 import { useRouter } from 'next/navigation';
 
 export default function TaskEditForm({ task, onCancelEdit, isOwner }) {
-  const { editTask } = useTasks();
+  const { updateTask } = useTasks(); 
   const { projects } = useProjects();
   const { user } = useUser();
   const router = useRouter();
@@ -24,7 +24,7 @@ export default function TaskEditForm({ task, onCancelEdit, isOwner }) {
     if (sharedWithEmail && !formik.values.sharedWith.includes(sharedWithEmail)) {
       try {
         const updatedSharedWith = [...formik.values.sharedWith, sharedWithEmail];
-        await editTask(task.id, {
+        await updateTask(task.id, { 
           ...task,
           sharedWith: updatedSharedWith
         });
@@ -57,7 +57,7 @@ export default function TaskEditForm({ task, onCancelEdit, isOwner }) {
         updatedAt: new Date().toISOString()
       };
       
-      await editTask(task.id, updatedTask);
+      await updateTask(task.id, updatedTask); 
       showNotification("Zadanie zostało zaktualizowane", "success");
       router.push(`/tasks/${task.id}`); 
     } catch (error) {
@@ -216,7 +216,7 @@ export default function TaskEditForm({ task, onCancelEdit, isOwner }) {
                   type="button"
                   onClick={async () => {
                     const newSharedWith = formik.values.sharedWith.filter((_, i) => i !== index);
-                    await editTask(task.id, {
+                    await updateTask(task.id, {
                       ...task,
                       sharedWith: newSharedWith
                     });
