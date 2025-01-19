@@ -10,6 +10,7 @@ const TaskContext = createContext();
 
 export function TaskProvider({ children }) {
   const [tasks, setTasks] = useState([]);
+  const [adminTasks, setAdminTasks] = useState([]); 
   const { user } = useUser();
   const { projects } = useProjects(); 
   const sendNotification = async (task, action) => {
@@ -42,6 +43,24 @@ export function TaskProvider({ children }) {
       console.error("Error wysyłając powiadomienia(Task):", error);
     }
   };
+
+  useEffect(() => {
+    if (!user?.isAdmin) return;
+
+    const allTasksQuery = query(collection(db, "tasks"));
+    
+    const unsubscribeAdmin = onSnapshot(allTasksQuery, (snapshot) => {
+      const allTasksData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setAdminTasks(allTasksData);
+    });
+
+    return () => {
+      unsubscribeAdmin();
+    };
+  }, [user?.isAdmin]);
 
   useEffect(() => {
     if (!user) return;
@@ -188,6 +207,11 @@ export function TaskProvider({ children }) {
     }
   };
 
+  const getAllTasks = () => {
+    if (!user?.isAdmin) return [];
+    return adminTasks;
+  };
+
   return (
     <TaskContext.Provider value={{ 
       tasks, 
@@ -195,7 +219,8 @@ export function TaskProvider({ children }) {
       deleteTask,
       updateTask: editTask, 
       toggleTaskCompletion,
-      leaveTask 
+      leaveTask,
+      getAllTasks 
     }}>
       {children}
     </TaskContext.Provider>

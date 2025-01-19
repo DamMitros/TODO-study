@@ -74,9 +74,7 @@ export default function CalendarPage() {
         <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))}>
           Poprzedni miesiąc
         </button>
-        <h2>
-          {currentDate.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' })}
-        </h2>
+        <h2>{currentDate.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' })}</h2>
         <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))}>
           Następny miesiąc
         </button>

@@ -52,13 +52,17 @@ export default function ProjectForm({ onProjectCreated }) {
   return (
     <div>
       <h2>Nowy Projekt</h2>
+      {error && <p>{error}</p>}
+      
       <form onSubmit={handleCreateProject}>
-        <input
-          type="text"
-          placeholder="Nazwa projektu"
-          value={projectName}
-          onChange={(e) => setProjectName(e.target.value)}
-        />
+        <div>
+          <input
+            type="text"
+            placeholder="Nazwa projektu"
+            value={projectName}
+            onChange={(e) => setProjectName(e.target.value)}
+          />
+        </div>
         
         <div>
           <input
@@ -67,18 +71,22 @@ export default function ProjectForm({ onProjectCreated }) {
             value={memberEmail}
             onChange={(e) => setMemberEmail(e.target.value)}
           />
-          <button type="button" onClick={handleAddMember}> Dodaj członka</button>
+          <button type="button" onClick={handleAddMember}>Dodaj członka</button>
         </div>
 
-        <div>
-          <h3>Członkowie projektu:</h3>
-          {members.map((email, index) => (
-            <div key={index}>
-              {email}
-              <button type="button" onClick={() => handleRemoveMember(email)}>Usuń</button>
+        {members.length > 0 && (
+          <div>
+            <h3>Członkowie projektu:</h3>
+            <div>
+              {members.map((email, index) => (
+                <div key={index}>
+                  <span>{email}</span>
+                  <button type="button" onClick={() => handleRemoveMember(email)}>Usuń</button>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
+        )}
 
         <button type="submit">Utwórz projekt</button>
       </form>

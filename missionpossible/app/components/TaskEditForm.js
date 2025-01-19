@@ -56,7 +56,6 @@ export default function TaskEditForm({ task, onCancelEdit, isOwner }) {
         sharedWith: sharedWithUsers,
         updatedAt: new Date().toISOString()
       };
-      
       await updateTask(task.id, updatedTask); 
       showNotification("Zadanie zostało zaktualizowane", "success");
       router.push(`/tasks/${task.id}`); 

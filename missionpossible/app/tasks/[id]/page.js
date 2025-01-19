@@ -10,34 +10,32 @@ import PersonalNotes from '../../components/PersonalNotes';
 import { NoteProvider } from '../../context/NoteContext';
 
 export default function TaskDetail() {
-  const { tasks, deleteTask, editTask, leaveTask } = useTasks();
   const [canEdit, setCanEdit] = useState(false);
   const [task, setTask] = useState(null);
   const { user } = useUser();
   const router = useRouter();
   const params = useParams(); 
   const id = params.id; 
-  
+  const { getAllTasks, deleteTask, updateTask, leaveTask } = useTasks();
+  const allTasks = getAllTasks();
+
   useEffect(() => {
-    if (!user) {
-      router.push('/login');
-      return;
-    }
-    if (id) {
-      const foundTask = tasks.find((t) => t.id === id);
-      if (foundTask && (foundTask.userId === user.uid || 
-          (foundTask.sharedWith && foundTask.sharedWith.includes(user.email)))) {
+    if (id && user) {
+      const foundTask = allTasks.find((t) => t.id === id);
+      if (user.isAdmin || 
+          foundTask.userId === user.uid || 
+          (foundTask.sharedWith && foundTask.sharedWith.includes(user.email))) {
         setTask(foundTask);
         setCanEdit(true);
       } else {
         router.push('/tasks');
       }
     }
-  }, [id, tasks, user, router]);
-
-  if (!user) {
-    return <p>Przekierowywanie do strony logowania...</p>;
-  }
+  }, [id, allTasks, user, router]);
+  
+  if (!user){
+    return <p>Wczytywanie danych użytkownika...</p>;
+  } 
 
   if (!task) {
     return <p>Ładowanie zadania...</p>;
@@ -58,7 +56,7 @@ export default function TaskDetail() {
       completed: !task.completed,
       completedAt: !task.completed ? new Date().toISOString() : null
     };
-    await editTask(task.id, updatedTask);
+    await updateTask(task.id, updatedTask);
     setTask(updatedTask);
   };
 
@@ -69,7 +67,7 @@ export default function TaskDetail() {
     }
   };
 
-  const isOwner = user && task && task.userId === user.uid;
+  const isOwner = user && task && (task.userId === user.uid || user.isAdmin);
 
   return (
     <div>

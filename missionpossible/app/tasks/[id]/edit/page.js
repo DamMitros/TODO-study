@@ -7,12 +7,12 @@ import { useEffect, useState } from "react";
 import TaskEditForm from "../../../components/TaskEditForm";
 
 export default function EditTaskPage() {
-  const { tasks } = useTasks();
+  const { getAllTasks } = useTasks();
   const { user } = useUser();
   const router = useRouter();
   const params = useParams();
+  const tasks = getAllTasks();
   const id = params.id;
-  
   const [task, setTask] = useState(null);
 
   useEffect(() => {
@@ -24,7 +24,7 @@ export default function EditTaskPage() {
     if (id) {
       const foundTask = tasks.find((t) => t.id === id);
       if (foundTask && (foundTask.userId === user.uid || 
-          (foundTask.sharedWith && foundTask.sharedWith.includes(user.email)))) {
+          (foundTask.sharedWith && foundTask.sharedWith.includes(user.email)) || user.isAdmin)) {
         setTask(foundTask);
       } else {
         router.push('/tasks');
@@ -44,7 +44,7 @@ export default function EditTaskPage() {
     router.push(`/tasks/${id}`);
   };
 
-  const isOwner = user && task && task.userId === user.uid;
+  const isOwner = user && task && task.userId === user.uid || user.isAdmin;
 
   return (
     <div>
