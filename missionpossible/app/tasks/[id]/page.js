@@ -12,6 +12,7 @@ import { NoteProvider } from '../../context/NoteContext';
 export default function TaskDetail() {
   const [canEdit, setCanEdit] = useState(false);
   const [task, setTask] = useState(null);
+  const [loading, setLoading] = useState(true);
   const { user } = useUser();
   const router = useRouter();
   const params = useParams(); 
@@ -22,6 +23,10 @@ export default function TaskDetail() {
   useEffect(() => {
     if (id && user) {
       const foundTask = allTasks.find((t) => t.id === id);
+      if (!foundTask) {
+        router.push('/tasks');
+        return;
+      }
       if (user.isAdmin || 
           foundTask.userId === user.uid || 
           (foundTask.sharedWith && foundTask.sharedWith.includes(user.email))) {
@@ -31,19 +36,28 @@ export default function TaskDetail() {
         router.push('/tasks');
       }
     }
+    setLoading(false);
   }, [id, allTasks, user, router]);
   
-  if (!user){
+  if (!user) {
     return <p>Wczytywanie danych użytkownika...</p>;
   } 
 
-  if (!task) {
+  if (loading) {
     return <p>Ładowanie zadania...</p>;
   }
 
+  if (!task) {
+    return <p>Zadanie nie istnieje lub zostało usunięte</p>;
+  }
+
   const handleDelete = async () => {
-    await deleteTask(task.id);
-    router.push("/tasks");
+    try {
+      await deleteTask(task.id);
+      router.push("/tasks");
+    } catch (error) {
+      console.error("Błąd podczas usuwania zadania:", error);
+    }
   };
 
   const handleEdit = () => {
@@ -51,19 +65,27 @@ export default function TaskDetail() {
   };
 
   const handleToggleCompletion = async () => {
-    const updatedTask = {
-      ...task,
-      completed: !task.completed,
-      completedAt: !task.completed ? new Date().toISOString() : null
-    };
-    await updateTask(task.id, updatedTask);
-    setTask(updatedTask);
+    try {
+      const updatedTask = {
+        ...task,
+        completed: !task.completed,
+        completedAt: !task.completed ? new Date().toISOString() : null
+      };
+      await updateTask(task.id, updatedTask);
+      setTask(updatedTask);
+    } catch (error) {
+      console.error("Błąd podczas aktualizacji statusu zadania:", error);
+    }
   };
 
   const handleLeaveTask = async () => {
     if (window.confirm('Czy na pewno chcesz opuścić to zadanie?')) {
-      await leaveTask(task.id);
-      router.push('/tasks');
+      try {
+        await leaveTask(task.id);
+        router.push('/tasks');
+      } catch (error) {
+        console.error("Błąd podczas opuszczania zadania:", error);
+      }
     }
   };
 

@@ -3,6 +3,7 @@ import { UserProvider } from "./context/UserContext";
 import { TaskProvider } from "./context/TaskContext"
 import { ProjectProvider } from "./context/ProjectContext";
 import { NotificationProvider } from './context/NotificationContext';
+import { BackupProvider } from './context/BackupContext';
 
 export const metadata = {
   title: "MissionPossible",
@@ -17,8 +18,10 @@ export default function RootLayout({ children }) {
           <NotificationProvider>
             <ProjectProvider>
               <TaskProvider>
-                <Navigation />
-                {children}
+                <BackupProvider>
+                  <Navigation />
+                  {children}
+                </BackupProvider>
               </TaskProvider>
             </ProjectProvider>
           </NotificationProvider>

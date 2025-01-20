@@ -19,6 +19,7 @@ export default function Navigation() {
       <a href="/calender">Kalendarz</a>
       {user ? (
         <>
+          {user.isAdmin ? <a href="/admin">Zarządzanie</a> : null}
           <a href="/profile">Profil</a>
           <button onClick={handleLogout}>Wyloguj</button>
         </>

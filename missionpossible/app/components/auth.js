@@ -1,11 +1,4 @@
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  sendEmailVerification,
-  signInWithPopup,
-  GoogleAuthProvider,
-  FacebookAuthProvider,
-} from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification, signInWithPopup, GoogleAuthProvider,} from "firebase/auth";
 import { auth, db } from "../../firebaseConfig";
 import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 
@@ -76,19 +69,6 @@ export const loginWithGoogle = async () => {
     return userCredential.user;
   } catch (error) {
     console.error("Błąd podczas logowania za pomocą Google", error);
-    throw error;
-  }
-};
-
-export const loginWithFacebook = async () => {
-  try {
-    const provider = new FacebookAuthProvider();
-    const userCredential = await signInWithPopup(auth, provider);
-    await createUserDocument(userCredential.user);
-    await updateLoginTimestamp(userCredential.user);
-    return userCredential.user;
-  } catch (error) {
-    console.error("Błąd podczas logowania za pomocą Facebook", error);
     throw error;
   }
 };

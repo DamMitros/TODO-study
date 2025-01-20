@@ -17,14 +17,21 @@ export function TaskProvider({ children }) {
     if (!user || !task) return;
     
     try {
-      const usersToNotify = new Set(task.sharedWith || []);
-      usersToNotify.delete(user.email); 
+      const usersToNotify = new Set([
+        ...(task.sharedWith || []),
+        ...(task.projectId ? projects.find(p => p.id === task.projectId)?.members || [] : [])
+      ]);
+      usersToNotify.delete(user.email);
 
       const messages = {
         created: 'zostało utworzone',
         updated: 'zostało zaktualizowane',
         deleted: 'zostało usunięte',
-        shared: 'zostało udostępnione'
+        shared: 'zostało udostępnione',
+        completed: 'zostało oznaczone jako wykonane',
+        uncompleted: 'zostało oznaczone jako niewykonane',
+        comment: 'otrzymało nowy komentarz',
+        progress: `zostało zaktualizowane (postęp: ${task.executionProgress}%)`
       };
 
       for (const recipientEmail of usersToNotify) {
@@ -32,23 +39,66 @@ export function TaskProvider({ children }) {
           userId: recipientEmail,
           taskId: task.id,
           type: 'task',
-          title: task.title,
+          title: `Aktualizacja zadania: ${task.title}`,
           message: `Zadanie ${messages[action]} przez ${user.email}`,
           timestamp: new Date().toISOString(),
-          read: false
+          read: false,
+          priority: task.importance >= 4 ? 'high' : 'normal'
         });
       }
 
     } catch (error) {
-      console.error("Error wysyłając powiadomienia(Task):", error);
+      console.error("Error wysyłając powiadomienia:", error);
+    }
+  };
+
+  const notifyTaskUsers = async (task, action) => {
+    if (!user || !task) return;
+    
+    try {
+      const usersToNotify = new Set([
+        task.userId, 
+        ...(task.sharedWith || []), 
+        ...(task.projectId ? projects.find(p => p.id === task.projectId)?.members || [] : []) 
+      ]);
+      usersToNotify.delete(user.email); 
+  
+      const messages = {
+        created: 'zostało utworzone',
+        updated: 'zostało zaktualizowane',
+        deleted: 'zostało usunięte',
+        shared: 'zostało udostępnione',
+        completed: 'zostało oznaczone jako wykonane',
+        uncompleted: 'zostało oznaczone jako niewykonane',
+        comment: 'otrzymało nowy komentarz',
+        progress: `zostało zaktualizowane (postęp: ${task.executionProgress}%)`
+      };
+  
+      for (const recipientEmail of usersToNotify) {
+        await addDoc(collection(db, 'notifications'), {
+          userId: recipientEmail,
+          taskId: task.id,
+          type: 'task',
+          title: `Aktualizacja zadania: ${task.title}`,
+          message: `Zadanie ${messages[action]} przez ${user.email}`,
+          timestamp: new Date().toISOString(),
+          read: false,
+          priority: task.importance >= 4 ? 'high' : 'normal'
+        });
+        if (task.projectId) {
+          const project = projects.find(p => p.id === task.projectId);
+          if (project) {
+            await notifyProjectMembers(project, 'task_updated');
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error wysyłając powiadomienie:", error);
     }
   };
 
   useEffect(() => {
-    if (!user?.isAdmin) return;
-
     const allTasksQuery = query(collection(db, "tasks"));
-    
     const unsubscribeAdmin = onSnapshot(allTasksQuery, (snapshot) => {
       const allTasksData = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -123,6 +173,76 @@ export function TaskProvider({ children }) {
     };
   }, [user, projects]);
 
+  useEffect(() => {
+    if (!user) return;
+
+    const hasExistingNotification = (notifications, task, isToday) => {
+      return notifications.some(n => 
+        n.taskId === task.id && 
+        n.type === 'deadline' &&
+        new Date(n.timestamp).toDateString() === new Date().toDateString() &&
+        ((isToday && n.message.includes('dzisiaj')) || 
+         (!isToday && n.message.includes('jutro')))
+      );
+    };
+
+    const checkDeadlines = async () => {
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const existingNotificationsSnapshot = await getDocs(
+        query(
+          collection(db, 'notifications'),
+          where('userId', '==', user.email),
+          where('type', '==', 'deadline')
+        )
+      );
+      
+      const existingNotifications = existingNotificationsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+  
+      for (const task of tasks) {
+        if (task.completed || !task.deadline) continue;
+        
+        const deadline = new Date(task.deadline);
+        const deadlineDate = deadline.toDateString();
+        const todayDate = today.toDateString();
+        const tomorrowDate = tomorrow.toDateString();
+  
+        if (deadlineDate === todayDate && !hasExistingNotification(existingNotifications, task, true)) {
+          await addDoc(collection(db, 'notifications'), {
+            userId: user.email,
+            taskId: task.id,
+            type: 'deadline',
+            title: 'Termin zadania dziś!',
+            message: `Zadanie "${task.title}" ma termin wykonania dzisiaj!`,
+            timestamp: new Date().toISOString(),
+            read: false,
+            priority: 'high'
+          });
+        }
+        else if (deadlineDate === tomorrowDate && !hasExistingNotification(existingNotifications, task, false)) {
+          await addDoc(collection(db, 'notifications'), {
+            userId: user.email,
+            taskId: task.id,
+            type: 'deadline',
+            title: 'Zbliżający się termin',
+            message: `Zadanie "${task.title}" ma termin wykonania jutro!`,
+            timestamp: new Date().toISOString(),
+            read: false,
+            priority: 'medium'
+          });
+        }
+      }
+    };
+    checkDeadlines();
+  
+    const interval = setInterval(checkDeadlines, 3600000);
+    return () => clearInterval(interval);
+  }, [tasks, user]);
+
   const addTask = async (taskData) => {
     try {
       const docRef = await addDoc(collection(db, 'tasks'), {
@@ -130,28 +250,35 @@ export function TaskProvider({ children }) {
         userId: user.uid,
         createdAt: new Date().toISOString()
       });
-      await sendNotification({
+      
+      await notifyTaskUsers({
         ...taskData,
         id: docRef.id
       }, 'created');
+
+      if (taskData.projectId) {
+        const project = projects.find(p => p.id === taskData.projectId);
+        if (project) {
+          await notifyProjectMembers(project, 'task_added');
+        }
+      }
     } catch (error) {
-      console.error('Error dodając taska:', error);
+      console.error('Error dodając zadanie:', error);
+      throw error;
     }
   };
 
   const updateTask = async (taskId, taskData) => {
     try {
       const taskRef = doc(db, 'tasks', taskId);
-      const taskSnapshot = await getDoc(taskRef);
-      const oldTaskData = taskSnapshot.data();
-      await updateDoc(taskRef, taskData);
-      await sendNotification({
-        ...oldTaskData,
+      await updateDoc(taskRef, {
         ...taskData,
-        id: taskId
-      }, 'updated');
+        updatedAt: new Date().toISOString()
+      });
+      await notifyTaskUsers(taskData, 'updated');
     } catch (error) {
-      console.error('Error aktualizując taska:', error);
+      console.error('Error aktualizując zadanie:', error);
+      throw error;
     }
   };
 
@@ -208,7 +335,6 @@ export function TaskProvider({ children }) {
   };
 
   const getAllTasks = () => {
-    if (!user?.isAdmin) return [];
     return adminTasks;
   };
 

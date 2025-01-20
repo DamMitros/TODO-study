@@ -1,18 +1,19 @@
 "use client";
 
 import { TaskProvider } from "../context/TaskContext";
-import TaskForm from "../components/TaskForm";
 import TaskList from "../components/TaskList";
+import { useRouter } from "next/navigation";
 
-export default function HomePage() {
+export default function TasksPage() {
+  const router = useRouter();
+
   return (
     <TaskProvider>
       <div>
-        <h1>TODO Application</h1>
-        <a> Tutaj jest opcja dodania notatek</a>
-        <TaskForm />
-        <p>----------------------------------</p>
-        <a> Tutaj jest lista notatek</a>
+        <div>
+          <h1>Lista zadań</h1>
+          <button onClick={() => router.push('/tasks/new')}>Dodaj nowe zadanie</button>
+        </div>
         <TaskList />
       </div>
     </TaskProvider>

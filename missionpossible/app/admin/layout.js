@@ -16,6 +16,7 @@ export default function AdminLayout({children}) {
         <a href="/admin/tasks">Zarządzanie zadaniami</a>
         <a href="/admin/projects">Zarządzanie projektami</a>
         <a href="/admin/stats">Statystyki aktywności</a>
+        <a href="/admin/backups">Zarządzanie backupami</a>
       </div>
       {children}
     </div>

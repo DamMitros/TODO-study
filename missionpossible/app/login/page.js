@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useUser } from "../context/UserContext";
-import { registerWithEmail, loginWithEmail, loginWithGoogle, loginWithFacebook } from "../components/auth";
+import { registerWithEmail, loginWithEmail, loginWithGoogle } from "../components/auth"; 
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -30,8 +30,6 @@ export default function LoginPage() {
         response = await loginWithEmail(email, password);
       } else if (method === "google") {
         response = await loginWithGoogle();
-      } else if (method === "facebook") {
-        response = await loginWithFacebook();
       } else {
         throw new Error("Nieznana metoda logowania");
       }
@@ -60,7 +58,6 @@ export default function LoginPage() {
       />
       <button onClick={() => handleLogin("email")}>Zaloguj się</button>
       <button onClick={() => handleLogin("google")}>Zaloguj się przez Google</button>
-      <button onClick={() => handleLogin("facebook")}>Zaloguj się przez Facebook</button>
 
       <h1>Rejestracja</h1>
       <input

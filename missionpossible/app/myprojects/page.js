@@ -4,12 +4,12 @@ import { useState } from 'react';
 import { useProjects } from '../context/ProjectContext';
 import { useUser } from '../context/UserContext';
 import ProjectForm from '../components/ProjectForm';
-import PersonalNotes from '../components/PersonalNotes';
-import { NoteProvider } from '../context/NoteContext';
+import { useRouter } from 'next/navigation';
 
 export default function ProjectsPage() {
   const { projects, deleteProject, leaveProject } = useProjects();
   const { user } = useUser();
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
 
@@ -31,7 +31,11 @@ export default function ProjectsPage() {
 
   const handleLeaveProject = async (projectId) => {
     if (window.confirm('Czy na pewno chcesz opuścić ten projekt?')) {
-      await leaveProject(projectId);
+      try {
+        await leaveProject(projectId);
+      } catch (error) {
+        console.error('Error opuszczając projekt:', error);
+      }
     }
   };
 
@@ -63,7 +67,9 @@ export default function ProjectsPage() {
         ) : (
           filteredProjects.map(project => (
             <div key={project.id}>
-              <h3>{project.name}</h3>
+              <h3 onClick={() => router.push(`/myprojects/${project.id}`)}>
+                {project.name}
+              </h3>
               <p>Data utworzenia: {new Date(project.createdAt).toLocaleDateString()}</p>
               <div>
                 <h4>Członkowie:</h4>
@@ -80,11 +86,8 @@ export default function ProjectsPage() {
               {project.createdBy === user.uid ? (
                 <button onClick={() => deleteProject(project.id)}>Usuń projekt</button>
               ) : (
-                <button onClick={() => handleLeaveProject(project.id)}> Opuść projekt</button>
+                <button onClick={() => handleLeaveProject(project.id)}>Opuść projekt</button>
               )}
-              <NoteProvider>
-                <PersonalNotes entityId={project.id} entityType="project" />
-              </NoteProvider>
             </div>
           ))
         )}

@@ -261,11 +261,16 @@ export default function TaskForm() {
           value={formik.values.projectId}
         >
           <option value="">Brak projektu</option>
-          {projects.map(project => (
-            <option key={project.id} value={project.id}>
-              {project.name}
-            </option>
-          ))}
+          {projects
+            .filter(project => 
+              project.createdBy === user.uid || 
+              (project.members && project.members.includes(user.email))
+            )
+            .map(project => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
         </select>
       </div>
 

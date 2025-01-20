@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, orderBy, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, orderBy} from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useUser } from './UserContext';
 
@@ -9,41 +9,58 @@ const NotificationContext = createContext();
 
 export function NotificationProvider({ children }) {
   const [notifications, setNotifications] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
   const { user } = useUser();
 
   useEffect(() => {
-    if (!user?.email) return;
+    if (!user) return;
 
-    const notificationsQuery = query(
+    const q = query(
       collection(db, 'notifications'),
       where('userId', '==', user.email),
       orderBy('timestamp', 'desc')
     );
 
-    const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
-      const newNotifications = snapshot.docs.map(doc => ({
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const notifs = snapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
+        timestamp: doc.data().timestamp
       }));
-      setNotifications(newNotifications);
-      setIsLoading(false);
+      setNotifications(notifs);
     });
 
     return () => unsubscribe();
   }, [user]);
 
+  const getNotificationColor = (type, priority) => {
+    switch (type) {
+      case 'deadline':
+        return 'red';
+      case 'task':
+        return priority === 'high' ? 'orange' : 'blue';
+      case 'project':
+        return 'green';
+      default:
+        return 'gray';
+    }
+  };
+
   const markAsRead = async (notificationId) => {
     try {
-      const notificationRef = doc(db, 'notifications', notificationId);
-      await updateDoc(notificationRef, { read: true });
+      await updateDoc(doc(db, 'notifications', notificationId), {
+        read: true
+      });
     } catch (error) {
-      console.error('Error czytając powiadomienie(ustawienie na przeczytanie):', error);
+      console.error("Error zaznaczając jako przeczytane:", error);
     }
   };
 
   return (
-    <NotificationContext.Provider value={{ notifications, isLoading, markAsRead }}>
+    <NotificationContext.Provider value={{ 
+      notifications, 
+      markAsRead,
+      getNotificationColor
+    }}>
       {children}
     </NotificationContext.Provider>
   );
@@ -55,49 +72,4 @@ export const useNotifications = () => {
     throw new Error('useNotifications musi być używane w ramach NotificationProvider');
   }
   return context;
-};
-
-const createTaskNotification = async (userContext, affectedUserEmail, taskTitle, action) => {
-  if (!userContext?.user) return;
-  if (userContext.user.email === affectedUserEmail) return;
-
-  const messages = {
-    created: `Zostałeś dodany do nowego zadania: ${taskTitle}`,
-    updated: `Zadanie "${taskTitle}" zostało zaktualizowane`,
-    deleted: `Zadanie "${taskTitle}" zostało usunięte`,
-    left: `Użytkownik ${userContext.user.email} opuścił zadanie "${taskTitle}"`,
-    shared: `Zadanie "${taskTitle}" zostało udostępnione użytkownikowi ${affectedUserEmail}`,
-  };
-
-  await addDoc(collection(db, 'notifications'), {
-    userId: userContext.user.uid,
-    timestamp: new Date().toISOString(),
-    read: false,
-    type: 'task',
-    title: `Zmiana w zadaniu: ${taskTitle}`,
-    message: messages[action],
-    taskId: taskId
-  });
-};
-
-const createProjectNotification = async (userContext, affectedUserEmail, projectName, action) => {
-  if (!userContext?.user) return;
-  
-  if (userContext.user.email === affectedUserEmail) return;
-
-  const messages = {
-    created: `Zostałeś dodany do nowego projektu: ${projectName}`,
-    updated: `Projekt "${projectName}" został zaktualizowany`,
-    deleted: `Projekt "${projectName}" został usunięty`,
-  };
-
-  await addDoc(collection(db, 'notifications'), {
-    userId: userContext.user.uid,
-    timestamp: new Date().toISOString(),
-    read: false,
-    type: 'project',
-    title: `Zmiana w projekcie: ${projectName}`,
-    message: messages[action],
-    projectId: projectId
-  });
 };
