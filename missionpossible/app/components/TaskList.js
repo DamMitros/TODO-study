@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTasks } from "../context/TaskContext";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useUser } from "../context/UserContext";
 import { useProjects } from "../context/ProjectContext"; 
 
@@ -11,43 +11,51 @@ export default function TaskList() {
   const { user } = useUser();
   const { projects } = useProjects(); 
   const router = useRouter();
+  const [isClient, setIsClient] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
   const [sortBy, setSortBy] = useState('deadline'); 
   const [sortDirection, setSortDirection] = useState('asc'); 
-  const [isClient, setIsClient] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchCategory, setSearchCategory] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [projectFilter, setProjectFilter] = useState('all');
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
+  const filteredAndSortedTasks = useMemo(() => {
+    if (!user) return [];
 
-  const handleTaskClick = (taskId) => {
-    router.push(`/tasks/${taskId}`);
-  };
+    const userTasks = tasks.filter(task => 
+      task.userId === user.uid || 
+      (task.sharedWith && task.sharedWith.includes(user.email))
+    ).filter(task => task.completed === showCompleted);
+  
+    const filtered = userTasks.filter(task => {
+      const matchesSearch = searchTerm ? (() => {
+        switch (searchCategory) {
+          case 'title':
+            return task.title.toLowerCase().includes(searchTerm.toLowerCase());
+          case 'description':
+            return task.description?.toLowerCase().includes(searchTerm.toLowerCase());
+          case 'location':
+            return task.location?.toLowerCase().includes(searchTerm.toLowerCase());
+          case 'all':
+          default:
+            return (
+              task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              task.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              task.location?.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+        }
+      })() : true;
 
-  const handleToggleComplete = (e, taskId) => {
-    e.stopPropagation(); 
-    toggleTaskCompletion(taskId);
-  };
+      const matchesCategory = searchCategory === 'all' || !searchCategory;
+      const matchesPriority = priorityFilter === 'all' || task.importance === Number(priorityFilter);
+      const matchesProject = projectFilter === 'all' || task.projectId === projectFilter;
 
-  if (!isClient) return null;
+      return matchesSearch && matchesCategory && matchesPriority && matchesProject;
+    });
 
-  if (!user) {
-    return (
-      <div>
-        <p>Musisz się zalogować, aby zobaczyć listę zadań.</p>
-        <a href="/login">Przejdź do logowania</a>
-      </div>
-    );
-  }
-
-  const sortTasks = (tasksToSort) => {
-    return tasksToSort.sort((a, b) => {
+    return filtered.sort((a, b) => {
       let comparison = 0;
-      
       switch (sortBy) {
         case 'deadline':
           comparison = (a.deadline || '') > (b.deadline || '') ? 1 : -1;
@@ -64,40 +72,55 @@ export default function TaskList() {
         default:
           return 0;
       }
-      
-      return sortDirection === 'desc' ? comparison * -1 : comparison;
+      return sortDirection === 'desc' ? -comparison : comparison;
     });
-  };
+  }, [
+    tasks,
+    user,
+    showCompleted,
+    searchTerm,
+    searchCategory,
+    priorityFilter,
+    projectFilter,
+    sortBy,
+    sortDirection
+  ]);
 
-  const filterTasks = (tasksToFilter) => {
-    return tasksToFilter.filter(task => {
-      const matchesSearch = searchTerm.toLowerCase().trim() === '' || 
-        task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (task.description && task.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (task.location && task.location.toLowerCase().includes(searchTerm.toLowerCase()));
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
-      const matchesCategory = searchCategory === 'all' || 
-        (searchCategory === 'title' && task.title.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (searchCategory === 'description' && task.description && task.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (searchCategory === 'location' && task.location && task.location.toLowerCase().includes(searchTerm.toLowerCase()));
+  const handleTaskClick = useCallback((taskId) => {
+    router.push(`/tasks/${taskId}`);
+  }, [router]);
 
-      const matchesPriority = priorityFilter === 'all' || 
-        task.importance === parseInt(priorityFilter);
+  const handleToggleComplete = useCallback((e, taskId) => {
+    e.stopPropagation(); 
+    toggleTaskCompletion(taskId);
+  }, [toggleTaskCompletion]);
 
-      const matchesProject = projectFilter === 'all' || task.projectId === projectFilter;
+  const handleSearchChange = useCallback((e) => {
+    setSearchTerm(e.target.value);
+  }, []);
 
-      return matchesSearch && matchesCategory && matchesPriority && matchesProject;
-    });
-  };
+  const handleSortDirectionToggle = useCallback(() => {
+    setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+  }, []);
 
-  const userTasks = sortTasks(
-    filterTasks(
-      tasks.filter(task => 
-        task.userId === user.uid || 
-        (task.sharedWith && task.sharedWith.includes(user.email))
-      ).filter(task => task.completed === showCompleted)
-    )
-  );
+  const handleShowCompletedToggle = useCallback(() => {
+    setShowCompleted(prev => !prev);
+  }, []);
+
+  if (!isClient) return null;
+
+  if (!user) {
+    return (
+      <div>
+        <p>Musisz się zalogować, aby zobaczyć listę zadań.</p>
+        <a href="/login">Przejdź do logowania</a>
+      </div>
+    );
+  }
 
   const userProjects = projects.filter(project => 
     project.createdBy === user.uid || 
@@ -113,7 +136,7 @@ export default function TaskList() {
           type="text"
           placeholder="Wyszukaj zadania..."
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={handleSearchChange}
         />
         
         <select
@@ -138,11 +161,11 @@ export default function TaskList() {
           <option value="progress">Postęp wykonania</option>
         </select>
 
-        <button onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}>
+        <button onClick={handleSortDirectionToggle}>
           {sortDirection === 'asc' ? '↑' : '↓'}
         </button>
 
-        <button onClick={() => setShowCompleted(!showCompleted)}>
+        <button onClick={handleShowCompletedToggle}>
           {showCompleted ? 'Pokaż aktywne zadania' : 'Pokaż wykonane zadania'}
         </button>
       </div>
@@ -175,13 +198,13 @@ export default function TaskList() {
         </select>
       </div>
 
-      {userTasks.length === 0 ? (
+      {filteredAndSortedTasks.length === 0 ? (
         <p>
           {showCompleted ? 'Brak wykonanych zadań!' : 'Nie masz jeszcze zapisanych zadań!'}
         </p>
       ) : (
         <ul>
-          {userTasks.map((task) => (
+          {filteredAndSortedTasks.map((task) => (
             <li key={task.id}>
               <div onClick={() => handleTaskClick(task.id)}>
                 <h3>{task.title}</h3>

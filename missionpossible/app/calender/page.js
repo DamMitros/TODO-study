@@ -1,49 +1,36 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useReducer } from 'react';
 import { useTasks } from './../context/TaskContext';
 import { useUser } from './../context/UserContext';
 import { useRouter } from 'next/navigation';
+import { taskReducer } from '../reducers/taskReducer';
+import { useIsTaskRecurring } from '../hooks/isTaskRecurring';
 
-const isTaskRecurring = (task, date) => {
-  if (!task.repeat || !task.deadline) return false;
-  
-  const taskStart = new Date(task.deadline);
-  const checkDate = new Date(date);
-
-  taskStart.setHours(0, 0, 0, 0);
-  checkDate.setHours(0, 0, 0, 0);
-
-  if (checkDate < taskStart) return false;
-
-  switch (task.repeat) {
-    case 'daily':
-      return true;
-    case 'weekly':
-      const weekDiff = Math.floor((checkDate - taskStart) / (7 * 24 * 60 * 60 * 1000));
-      return weekDiff >= 0 && checkDate.getDay() === taskStart.getDay();
-    case 'biweekly':
-      const twoWeekDiff = Math.floor((checkDate - taskStart) / (14 * 24 * 60 * 60 * 1000));
-      return twoWeekDiff >= 0 && checkDate.getDay() === taskStart.getDay() && twoWeekDiff % 1 === 0;
-    case 'monthly':
-      return checkDate.getDate() === taskStart.getDate();
-    case 'quarterly':
-      const monthDiff = (checkDate.getFullYear() - taskStart.getFullYear()) * 12 + 
-                       (checkDate.getMonth() - taskStart.getMonth());
-      return monthDiff % 3 === 0 && checkDate.getDate() === taskStart.getDate();
-    case 'yearly':
-      return checkDate.getDate() === taskStart.getDate() && 
-             checkDate.getMonth() === taskStart.getMonth();
-    default: // 'jednorazowe'
-      return checkDate.getTime() === taskStart.getTime();
-  }
+const initialState = {
+  tasks: [],
+  loading: true
 };
 
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [state, dispatch] = useReducer(taskReducer, initialState);
+  const isTaskRecurring = useIsTaskRecurring();
   const { tasks } = useTasks();
   const { user } = useUser();
   const router = useRouter();
+
+  useEffect(() => {
+    dispatch({ type: 'SET_LOADING', payload: true });
+    
+    if (tasks) {
+      const userTasks = tasks.filter(task => 
+        task.userId === user.uid || 
+        (task.sharedWith && task.sharedWith.includes(user.email))
+      );
+      dispatch({ type: 'SET_TASKS', payload: userTasks });
+    }
+  }, [user, tasks, router]);
 
   const getCalendarDays = (date) => {
     const year = date.getFullYear();
@@ -61,12 +48,30 @@ export default function CalendarPage() {
   };
 
   const getTasksForDate = (date) => {
-    return tasks.filter(task => {
-      return task.userId === user.uid && 
-             (isTaskRecurring(task, date) || 
-              (task.deadline && new Date(task.deadline).toDateString() === date.toDateString()));
+    if (!user || !state.tasks) return [];
+    
+    return state.tasks.filter(task => {
+      if (!task.deadline) return false;
+
+      const taskDate = new Date(task.deadline);
+      const checkDate = new Date(date);
+      const hasAccess = task.userId === user.uid || 
+            (task.sharedWith && task.sharedWith.includes(user.email));
+                       
+      if (!task.repeat) {
+        return taskDate.toDateString() === checkDate.toDateString() && hasAccess;
+      }
+      return isTaskRecurring(task, date) && hasAccess;
     });
   };
+
+  if (!user) {
+    return <div>Wczytywanie </div>;
+  }
+
+  if (state.loading) {
+    return <div>Wczytywanie zadań...</div>;
+  }
 
   return (
     <div>
@@ -94,9 +99,6 @@ export default function CalendarPage() {
                 {dayTasks.map((task, taskIdx) => (
                   <div key={taskIdx} onClick={() => router.push(`/tasks/${task.id}`)}>
                     <span>{task.title}</span>
-                    <span>
-                      {new Date(task.deadline).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                    </span>
                   </div>
                 ))}
               </div>

@@ -1,7 +1,7 @@
 export default function LoginLayout({children}){
   return(
     <div>
-      <h1> ZALOGUJN SIĘ</h1>
+      <h1> Zaloguj się</h1>
       {children}
     </div>
   )

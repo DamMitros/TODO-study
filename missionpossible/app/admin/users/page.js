@@ -4,6 +4,7 @@ import { useUser } from "../../context/UserContext";
 import { useState, useEffect } from "react";
 import { collection, getDocs, deleteDoc, doc, addDoc, query, where, orderBy, updateDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
+import ConfirmDialog from "../../components/ConfirmDialogs";
 
 export default function AdminUsersPage() {
   const { user } = useUser();
@@ -11,6 +12,11 @@ export default function AdminUsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    message: '',
+    onConfirm: null
+  });
 
   useEffect(() => {
     if (!user?.isAdmin) return;
@@ -64,14 +70,19 @@ export default function AdminUsersPage() {
   }, [user]);
 
   const deleteUser = async (userId) => {
-    if (!window.confirm("Czy na pewno chcesz usunąć tego użytkownika?")) return;
-    
-    try {
-      await deleteDoc(doc(db, "users", userId));
-      setUsers(users.filter(u => u.id !== userId));
-    } catch (error) {
-      console.error("Błąd podczas usuwania użytkownika:", error);
-    }
+    setConfirmDialog({
+      isOpen: true,
+      message: "Czy na pewno chcesz usunąć tego użytkownika?",
+      onConfirm: async () => {
+        try {
+          await deleteDoc(doc(db, "users", userId));
+          setUsers(users.filter(u => u.id !== userId));
+        } catch (error) {
+          console.error("Błąd podczas usuwania użytkownika:", error);
+        }
+        setConfirmDialog({ isOpen: false, message: '', onConfirm: null });
+      }
+    });
   };
 
   const toggleUserBan = async (userId, isBanned) => {
@@ -184,6 +195,13 @@ export default function AdminUsersPage() {
           </tbody>
         </table>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog({ isOpen: false, message: '', onConfirm: null })}
+      />
     </div>
   );
 }

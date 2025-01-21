@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { useTasks } from "../context/TaskContext";
@@ -14,38 +14,31 @@ export default function TaskForm() {
   const [dateRange, setDateRange] = useState(false);
   const [sharedWithEmail, setSharedWithEmail] = useState('');
   const [notification, setNotification] = useState(null);
-  const showNotification = (message, type) => {
+  const showNotification = useCallback((message, type) => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 5000);
-  };
+  }, []);
 
   const handleSubmit = async (values) => {
-    if (!user) return;
     try {
-      let sharedWithUsers = [...values.sharedWith];
-      if (values.projectId) {
-        const selectedProject = projects.find(p => p.id === values.projectId);
-        if (selectedProject && selectedProject.members) {
-          sharedWithUsers = [...new Set([
-            ...sharedWithUsers,
-            ...selectedProject.members.filter(member => member !== user.email)
-          ])];
-        }
-      }
-
       const task = {
-        ...values,
+        title: values.title,
+        description: values.description,
+        location: values.location || "",
+        repeat: values.repeat || "",
         userId: user.uid,
+        importance: Number(values.importance),
+        deadline: values.deadline,
+        completed: false,  
+        executionProgress: 0,
         createdAt: new Date().toISOString(),
-        deadline: dateRange ? `${values.deadlineStart} do ${values.deadlineEnd}` : values.deadline,
-        executionProgress: Number(values.executionProgress),
-        sharedWith: sharedWithUsers,
-        projectId: values.projectId,
+        sharedWith: values.sharedWith || [],
+        projectId: values.projectId || ""
       };
       await addTask(task);
       formik.resetForm();
       setSharedWithEmail('');
-      showNotification("Zadanie zostało utworzone i udostępnione członkom projektu", "success");
+      showNotification("Zadanie zostało utworzone", "success");
     } catch (error) {
       console.error("Error przy dodawaniu zadania:", error);
       showNotification("Wystąpił błąd podczas tworzenia zadania", "error");
@@ -94,7 +87,7 @@ export default function TaskForm() {
     onSubmit: handleSubmit
   });
 
-  const handleShare = async () => {
+  const handleShare = useCallback(async () => {
     if (!sharedWithEmail) return;
 
     if (formik.values.projectId) {
@@ -110,22 +103,6 @@ export default function TaskForm() {
           }
           setSharedWithEmail('');
           return;
-        } else {
-          const addToProject = window.confirm(
-            "Ta osoba nie jest członkiem wybranego projektu. Czy chcesz dodać ją do projektu?"
-          );
-          if (addToProject) {
-            formik.setFieldValue('sharedWith', [...formik.values.sharedWith, sharedWithEmail]);
-          } else {
-            const removeProject = window.confirm(
-              "Czy chcesz usunąć zadanie z projektu?"
-            );
-            if (removeProject) {
-              formik.setFieldValue('projectId', '');
-            } else {
-              return;
-            }
-          }
         }
       }
     }
@@ -134,7 +111,7 @@ export default function TaskForm() {
       formik.setFieldValue('sharedWith', [...formik.values.sharedWith, sharedWithEmail]);
     }
     setSharedWithEmail('');
-  };
+  }, [sharedWithEmail, formik.values.projectId, formik.values.sharedWith, projects, showNotification]);
 
   if (!user) {
     return <p>Musisz być zalogowany, aby dodać nowe zadanie.</p>;
@@ -194,43 +171,13 @@ export default function TaskForm() {
         value={formik.values.importance}
       />
 
-      <label>
-        <input
-          type="checkbox"
-          checked={dateRange}
-          onChange={() => setDateRange(!dateRange)}
-        />
-        Użyj zakresu dat
-      </label>
-
-      {!dateRange ? (
-        <input
-          type="date"
-          name="deadline"
-          onChange={formik.handleChange}
-          onBlur={formik.handleBlur}
-          value={formik.values.deadline}
-        />
-      ) : (
-        <>
-          <input
-            type="date"
-            name="deadlineStart"
-            placeholder="Data rozpoczęcia"
-            onChange={formik.handleChange}
-            onBlur={formik.handleBlur}
-            value={formik.values.deadlineStart}
-          />
-          <input
-            type="date"
-            name="deadlineEnd"
-            placeholder="Data zakończenia"
-            onChange={formik.handleChange}
-            onBlur={formik.handleBlur}
-            value={formik.values.deadlineEnd}
-          />
-        </>
-      )}
+      <input
+        type="date"
+        name="deadline"
+        onChange={formik.handleChange}
+        onBlur={formik.handleBlur}
+        value={formik.values.deadline}
+      />
 
       <div>
         <label>

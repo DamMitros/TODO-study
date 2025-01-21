@@ -1,28 +1,42 @@
 "use client";
 
 import { useNotifications } from '../context/NotificationContext';
+import { useState } from 'react';
 
 export default function HomeNotifications() {
   const { notifications, markAsRead, getNotificationColor } = useNotifications();
-  
-  const unreadNotifications = notifications
+  const [typeFilter, setTypeFilter] = useState('all');
+  const filteredNotifications = notifications
     .filter(n => !n.read)
-    .sort((a, b) => {
-      if (a.type === 'deadline' && b.type !== 'deadline') return -1;
-      if (a.type !== 'deadline' && b.type === 'deadline') return 1;
-      if (a.priority === 'high' && b.priority !== 'high') return -1;
-      if (a.priority !== 'high' && b.priority === 'high') return 1;
-      return new Date(b.timestamp) - new Date(a.timestamp);
-    });
+    .filter(n => typeFilter === 'all' ? true : n.type === typeFilter)
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); 
 
   return (
     <div>
-      <h2>Nowe powiadomienia ({unreadNotifications.length})</h2>
+      <div>
+        <h2>Nowe powiadomienia ({filteredNotifications.length})</h2>
+        <select 
+          value={typeFilter} 
+          onChange={(e) => setTypeFilter(e.target.value)}
+        >
+          <option value="all">Wszystkie powiadomienia</option>
+          <option value="deadline">Terminy</option>
+          <option value="task">Zadania</option>
+          <option value="project">Projekty</option>
+          <option value="comment">Komentarze</option>
+          <option value="backup">Kopie zapasowe</option>
+        </select>
+      </div>
+
       <ul>
-        {unreadNotifications.map(notification => (
+        {filteredNotifications.map(notification => (
           <li 
             key={notification.id}
-            style={{ borderLeft: `4px solid ${getNotificationColor(notification.type, notification.priority)}`}}
+            style={{ 
+              borderLeft: `4px solid ${getNotificationColor(notification.type, notification.priority)}`,
+              marginBottom: '10px',
+              padding: '10px'
+            }}
           >
             <h4>{notification.title}</h4>
             <p>{notification.message}</p>

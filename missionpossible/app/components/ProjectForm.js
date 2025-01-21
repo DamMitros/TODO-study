@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useProjects } from '../context/ProjectContext';
 import { useUser } from '../context/UserContext';
 
@@ -11,7 +11,8 @@ export default function ProjectForm({ onProjectCreated }) {
   const [memberEmail, setMemberEmail] = useState('');
   const [members, setMembers] = useState([]);
   const [error, setError] = useState('');
-  const handleCreateProject = async (e) => {
+
+  const handleCreateProject = useCallback(async (e) => {
     e.preventDefault();
     if (!projectName) {
       setError('Nazwa projektu jest wymagana');
@@ -36,18 +37,18 @@ export default function ProjectForm({ onProjectCreated }) {
     } catch (error) {
       setError('Błąd podczas tworzenia projektu: ' + error.message);
     }
-  };
+  }, [projectName, members, user, addProject, onProjectCreated]);
 
-  const handleAddMember = () => {
+  const handleAddMember = useCallback(() => {
     if (memberEmail && !members.includes(memberEmail)) {
       setMembers([...members, memberEmail]);
       setMemberEmail('');
     }
-  };
+  }, [memberEmail, members]);
 
-  const handleRemoveMember = (emailToRemove) => {
+  const handleRemoveMember = useCallback((emailToRemove) => {
     setMembers(members.filter(email => email !== emailToRemove));
-  };
+  }, [members]);
 
   return (
     <div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from "react";
-import { collection, addDoc, onSnapshot, query, where, orderBy } from "firebase/firestore";
+import { collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, updateDoc } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 import { useUser } from "./UserContext";
 
@@ -31,7 +31,7 @@ export const CommentProvider = ({ children }) => {
   }, [user]);
 
   const addComment = async (comment) => {
-    await addDoc(collection(db, "comments"), {
+    return await addDoc(collection(db, "comments"), {
       ...comment,
       createdAt: new Date().toISOString(),
       userId: user.uid,
@@ -39,8 +39,26 @@ export const CommentProvider = ({ children }) => {
     });
   };
 
+  const deleteComment = async (commentId) => {
+    const commentRef = doc(db, "comments", commentId);
+    await deleteDoc(commentRef);
+  };
+
+  const editComment = async (commentId, content) => {
+    const commentRef = doc(db, "comments", commentId);
+    await updateDoc(commentRef, {
+      content,
+      editedAt: new Date().toISOString()
+    });
+  };
+
   return (
-    <CommentContext.Provider value={{ comments, addComment }}>
+    <CommentContext.Provider value={{ 
+      comments, 
+      addComment, 
+      deleteComment,
+      editComment 
+    }}>
       {children}
     </CommentContext.Provider>
   );

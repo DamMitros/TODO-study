@@ -3,12 +3,18 @@
 import { useProjects } from "../../context/ProjectContext";
 import { useUser } from "../../context/UserContext";
 import { useState, useEffect } from "react";
+import ConfirmDialog from "../../components/ConfirmDialogs";
 
 export default function AdminProjectsPage() {
   const { projects, deleteProject } = useProjects();
   const { user } = useUser();
   const [filteredProjects, setFilteredProjects] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    message: '',
+    onConfirm: null
+  });
 
   useEffect(() => {
     if (!user?.isAdmin) return;
@@ -20,13 +26,18 @@ export default function AdminProjectsPage() {
   }, [projects, searchTerm, user]);
 
   const handleDeleteProject = async (projectId) => {
-    if (!window.confirm("Czy na pewno chcesz usunąć ten projekt?")) return;
-    
-    try {
-      await deleteProject(projectId);
-    } catch (error) {
-      console.error("Błąd podczas usuwania projektu:", error);
-    }
+    setConfirmDialog({
+      isOpen: true,
+      message: "Czy na pewno chcesz usunąć ten projekt?",
+      onConfirm: async () => {
+        try {
+          await deleteProject(projectId);
+        } catch (error) {
+          console.error("Błąd podczas usuwania projektu:", error);
+        }
+        setConfirmDialog({ isOpen: false, message: '', onConfirm: null });
+      }
+    });
   };
 
   if (!user?.isAdmin) {
@@ -67,6 +78,13 @@ export default function AdminProjectsPage() {
           ))}
         </tbody>
       </table>
+
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog({ isOpen: false, message: '', onConfirm: null })}
+      />
     </div>
   );
 }

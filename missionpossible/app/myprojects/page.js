@@ -5,6 +5,7 @@ import { useProjects } from '../context/ProjectContext';
 import { useUser } from '../context/UserContext';
 import ProjectForm from '../components/ProjectForm';
 import { useRouter } from 'next/navigation';
+import ConfirmDialog from "../components/ConfirmDialogs";
 
 export default function ProjectsPage() {
   const { projects, deleteProject, leaveProject } = useProjects();
@@ -12,6 +13,11 @@ export default function ProjectsPage() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    message: '',
+    onConfirm: null
+  });
 
   if (!user) {
     return <div>Musisz się zalogować, aby zobaczyć projekty.</div>;
@@ -29,14 +35,34 @@ export default function ProjectsPage() {
     ))
   );
 
-  const handleLeaveProject = async (projectId) => {
-    if (window.confirm('Czy na pewno chcesz opuścić ten projekt?')) {
-      try {
-        await leaveProject(projectId);
-      } catch (error) {
-        console.error('Error opuszczając projekt:', error);
+  const handleDeleteProject = (projectId) => {
+    setConfirmDialog({
+      isOpen: true,
+      message: "Czy na pewno chcesz usunąć ten projekt?",
+      onConfirm: async () => {
+        try {
+          await deleteProject(projectId);
+        } catch (error) {
+          console.error("Błąd podczas usuwania projektu:", error);
+        }
+        setConfirmDialog({ isOpen: false, message: '', onConfirm: null });
       }
-    }
+    });
+  };
+
+  const handleLeaveProject = (projectId) => {
+    setConfirmDialog({
+      isOpen: true,
+      message: "Czy na pewno chcesz opuścić ten projekt?",
+      onConfirm: async () => {
+        try {
+          await leaveProject(projectId);
+        } catch (error) {
+          console.error("Błąd podczas opuszczania projektu:", error);
+        }
+        setConfirmDialog({ isOpen: false, message: '', onConfirm: null });
+      }
+    });
   };
 
   return (
@@ -84,7 +110,7 @@ export default function ProjectsPage() {
                 </ul>
               </div>
               {project.createdBy === user.uid ? (
-                <button onClick={() => deleteProject(project.id)}>Usuń projekt</button>
+                <button onClick={() => handleDeleteProject(project.id)}>Usuń projekt</button>
               ) : (
                 <button onClick={() => handleLeaveProject(project.id)}>Opuść projekt</button>
               )}
@@ -92,6 +118,13 @@ export default function ProjectsPage() {
           ))
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog({ isOpen: false, message: '', onConfirm: null })}
+      />
     </div>
   );
 }

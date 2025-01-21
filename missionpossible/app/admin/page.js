@@ -4,6 +4,7 @@ import { useUser } from "../context/UserContext";
 import { collection, query, getDocs, doc, updateDoc, deleteDoc, addDoc, where } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 import { useRouter } from "next/navigation";
+import ConfirmDialog from "../components/ConfirmDialogs";
 
 export default function AdminPanel() {
   const { user } = useUser();
@@ -56,6 +57,12 @@ export default function AdminPanel() {
     fetchData();
   }, [user, router]);
 
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    message: '',
+    onConfirm: null
+  });
+
   const toggleAdminStatus = async (userEmail, currentStatus) => {
     try {
       if (currentStatus) {
@@ -77,14 +84,19 @@ export default function AdminPanel() {
   };
 
   const deleteUser = async (userId) => {
-    if (window.confirm('Czy na pewno chcesz usunąć tego użytkownika?')) {
-      try {
-        await deleteDoc(doc(db, "users", userId));
-        setUsers(users.filter(u => u.id !== userId));
-      } catch (error) {
-        console.error("Błąd podczas usuwania użytkownika:", error);
+    setConfirmDialog({
+      isOpen: true,
+      message: 'Czy na pewno chcesz usunąć tego użytkownika?',
+      onConfirm: async () => {
+        try {
+          await deleteDoc(doc(db, "users", userId));
+          setUsers(users.filter(u => u.id !== userId));
+        } catch (error) {
+          console.error("Błąd podczas usuwania użytkownika:", error);
+        }
+        setConfirmDialog({ isOpen: false, message: '', onConfirm: null });
       }
-    }
+    });
   };
 
   if (!user?.isAdmin) {
@@ -132,6 +144,13 @@ export default function AdminPanel() {
           </tbody>
         </table>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog({ isOpen: false, message: '', onConfirm: null })}
+      />
     </div>
   );
 }

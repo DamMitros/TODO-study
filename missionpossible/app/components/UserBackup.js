@@ -1,46 +1,74 @@
-"use client"
+"use client";
+
 import { useBackup } from '../context/BackupContext';
-import { useUser } from '../context/UserContext';
 import { useNotifications } from '../context/NotificationContext';
+import { useCallback, useState } from 'react';
+import ConfirmDialog from '../components/ConfirmDialogs';
 
 export default function UserBackup() {
-  const { user } = useUser();
   const { backups, createUserBackup, downloadBackup, restoreBackup, deleteBackup } = useBackup();
   const { addNotification } = useNotifications();
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    message: '',
+    onConfirm: null
+  });
 
-  const handleCreateBackup = async () => {
+  const handleCreateBackup = useCallback(async () => {
     try {
-      await createUserBackup();
-      addNotification('Kopia zapasowa została utworzona', 'success');
+      const backup = await createUserBackup();
+      if (backup) {
+        addNotification({
+          type: 'backup',
+          title: 'Kopia zapasowa',
+          message: 'Kopia zapasowa została utworzona pomyślnie',
+          priority: 'normal'
+        });
+      }
     } catch (error) {
-      console.error('Backup nie stworzony:', error);
-      addNotification('Błąd podczas tworzenia kopii zapasowej', 'error');
+      console.error('Backup creation failed:', error);
+      addNotification({
+        type: 'backup',
+        title: 'Błąd kopii zapasowej',
+        message: 'Wystąpił błąd podczas tworzenia kopii zapasowej',
+        priority: 'high'
+      });
     }
-  };
+  }, [createUserBackup, addNotification]);
 
-  const handleRestore = async (backup) => {
-    if (window.confirm('Czy na pewno chcesz przywrócić dane z tej kopii zapasowej? Aktualne dane zostaną zastąpione.')) {
-      try {
-        await restoreBackup(backup);
-        addNotification('Dane zostały przywrócone z kopii zapasowej', 'success');
-      } catch (error) {
-        console.error('Przywrócanie nieudane:', error);
-        addNotification('Błąd podczas przywracania danych', 'error');
+  const handleRestore = useCallback(async (backup) => {
+    setConfirmDialog({
+      isOpen: true,
+      message: 'Czy na pewno chcesz przywrócić dane z tej kopii zapasowej?',
+      onConfirm: async () => {
+        try {
+          await restoreBackup(backup);
+          addNotification('Dane zostały przywrócone z kopii zapasowej', 'success');
+        } catch (error) {
+          console.error('Przywrócenie nieudane:', error);
+          addNotification('Błąd podczas przywracania danych', 'error');
+        }
+        setConfirmDialog({ isOpen: false, message: '', onConfirm: null });
       }
-    }
-  };
+    });
+  }, [restoreBackup, addNotification]);
 
-  const handleDelete = async (backupId) => {
-    if (window.confirm('Czy na pewno chcesz usunąć tę kopię zapasową?')) {
-      try {
-        await deleteBackup(backupId);
-        addNotification('Kopia zapasowa została usunięta', 'success');
-      } catch (error) {
-        console.error('Usuwanie nieudane:', error);
-        addNotification('Błąd podczas usuwania kopii zapasowej', 'error');
+  const handleDelete = useCallback(async (backupId) => {
+    setConfirmDialog({
+      isOpen: true,
+      message: 'Czy na pewno chcesz usunąć tę kopię zapasową?',
+      onConfirm: async () => {
+        try {
+          await deleteBackup(backupId);
+          addNotification('Kopia zapasowa została usunięta', 'success');
+        } catch (error) {
+          console.error('Usuwanie nieudane:', error);
+          addNotification('Błąd podczas usuwania kopii zapasowej', 'error');
+        }
+        setConfirmDialog({ isOpen: false, message: '', onConfirm: null });
       }
-    }
-  };
+    });
+  }, [deleteBackup, addNotification]);
 
   return (
     <div>
@@ -68,6 +96,13 @@ export default function UserBackup() {
           </ul>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog({ isOpen: false, message: '', onConfirm: null })}
+      />
     </div>
   );
 }

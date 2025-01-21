@@ -82,49 +82,42 @@ export function BackupProvider({ children }) {
   };
 
   const createSystemBackup = async () => {
-    if (!user?.isAdmin) return;
-
     try {
       const backup = {
-        timestamp: new Date().toISOString(),
-        data: {
-          users: [],
-          tasks: [],
-          projects: []
-        }
+        users: [],
+        tasks: [],
+        projects: [],
+        timestamp: new Date().toISOString()
       };
+  
+      const [usersSnapshot, tasksSnapshot, projectsSnapshot] = await Promise.all([
+        getDocs(collection(db, 'users')),
+        getDocs(collection(db, 'tasks')),
+        getDocs(collection(db, 'projects'))
+      ]);
 
-      const usersSnapshot = await getDocs(collection(db, 'users'));
-      backup.data.users = usersSnapshot.docs.map(doc => ({
+      backup.users = usersSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-      const tasksSnapshot = await getDocs(collection(db, 'tasks'));
-      backup.data.tasks = tasksSnapshot.docs.map(doc => ({
+      backup.tasks = tasksSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-      const projectsSnapshot = await getDocs(collection(db, 'projects'));
-      backup.data.projects = projectsSnapshot.docs.map(doc => ({
+      backup.projects = projectsSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-      const backupString = JSON.stringify(backup);
-      const size = new Blob([backupString]).size;
-      const backupDoc = await addDoc(collection(db, 'systemBackups'), {
-        ...backup,
-        size: size,
-        createdBy: user.uid,
-        createdAt: new Date().toISOString()
+
+      await addDoc(collection(db, 'systemBackups'), {
+        data: backup,
+        timestamp: backup.timestamp,
+        size: new Blob([JSON.stringify(backup)]).size
       });
 
-      return {
-        id: backupDoc.id,
-        ...backup,
-        size: size
-      };
+      return backup;
     } catch (error) {
-      console.error('System backup nie stworzony:', error);
+      console.error('Error tworząć system-backup:', error);
       throw error;
     }
   };

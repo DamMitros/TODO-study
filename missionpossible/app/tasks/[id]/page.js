@@ -8,8 +8,16 @@ import TaskComments from '../../components/TaskComments';
 import { CommentProvider } from '../../context/CommentContext';
 import PersonalNotes from '../../components/PersonalNotes';
 import { NoteProvider } from '../../context/NoteContext';
+import TaskProgressBar from "../../components/TaskProgressBar";
+import ConfirmDialog from "../../components/ConfirmDialogs";
 
 export default function TaskDetail() {
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    message: '',
+    onConfirm: null
+  });
+
   const [canEdit, setCanEdit] = useState(false);
   const [task, setTask] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -17,14 +25,14 @@ export default function TaskDetail() {
   const router = useRouter();
   const params = useParams(); 
   const id = params.id; 
-  const { getAllTasks, deleteTask, updateTask, leaveTask } = useTasks();
+  const { getAllTasks, deleteTask, updateTask, leaveTask, toggleTaskCompletion } = useTasks();
   const allTasks = getAllTasks();
 
   useEffect(() => {
     if (id && user) {
       const foundTask = allTasks.find((t) => t.id === id);
       if (!foundTask) {
-        router.push('/tasks');
+        // router.push('/tasks');
         return;
       }
       if (user.isAdmin || 
@@ -48,16 +56,23 @@ export default function TaskDetail() {
   }
 
   if (!task) {
-    return <p>Zadanie nie istnieje lub zostało usunięte</p>;
+    return <p>Zadanie nie istnieje, zostało usunięte lub nie masz do niego dostępu</p>;
   }
 
-  const handleDelete = async () => {
-    try {
-      await deleteTask(task.id);
-      router.push("/tasks");
-    } catch (error) {
-      console.error("Błąd podczas usuwania zadania:", error);
-    }
+  const handleDelete = () => {
+    setConfirmDialog({
+      isOpen: true,
+      message: "Czy na pewno chcesz usunąć to zadanie?",
+      onConfirm: async () => {
+        try {
+          await deleteTask(task.id);
+          router.push("/tasks");
+        } catch (error) {
+          console.error("Błąd podczas usuwania zadania:", error);
+        }
+        setConfirmDialog({ isOpen: false, message: '', onConfirm: null });
+      }
+    });
   };
 
   const handleEdit = () => {
@@ -66,27 +81,31 @@ export default function TaskDetail() {
 
   const handleToggleCompletion = async () => {
     try {
-      const updatedTask = {
+      await toggleTaskCompletion(task.id);
+      setTask({
         ...task,
         completed: !task.completed,
         completedAt: !task.completed ? new Date().toISOString() : null
-      };
-      await updateTask(task.id, updatedTask);
-      setTask(updatedTask);
+      });
     } catch (error) {
       console.error("Błąd podczas aktualizacji statusu zadania:", error);
     }
   };
 
-  const handleLeaveTask = async () => {
-    if (window.confirm('Czy na pewno chcesz opuścić to zadanie?')) {
-      try {
-        await leaveTask(task.id);
-        router.push('/tasks');
-      } catch (error) {
-        console.error("Błąd podczas opuszczania zadania:", error);
+  const handleLeaveTask = () => {
+    setConfirmDialog({
+      isOpen: true,
+      message: "Czy na pewno chcesz opuścić to zadanie?",
+      onConfirm: async () => {
+        try {
+          await leaveTask(task.id);
+          router.push("/tasks");
+        } catch (error) {
+          console.error("Błąd podczas opuszczania zadania:", error);
+        }
+        setConfirmDialog({ isOpen: false, message: '', onConfirm: null });
       }
-    }
+    });
   };
 
   const isOwner = user && task && (task.userId === user.uid || user.isAdmin);
@@ -105,12 +124,7 @@ export default function TaskDetail() {
       )}
       <div>
         <p><strong>Postęp wykonania:</strong> {task.executionProgress}%</p>
-        <div>
-          <div 
-            className="progress-fill"
-            style={{ width: `${task.executionProgress}%` }} // takie zielone linie aby pokazywało postęp??? (to be implemented??)
-          />
-        </div>
+        <TaskProgressBar progress={task.executionProgress} />
       </div>
       <br />
       <button onClick={handleToggleCompletion}>
@@ -135,6 +149,13 @@ export default function TaskDetail() {
       <NoteProvider>
         <PersonalNotes entityId={task.id} entityType="task" />
       </NoteProvider>
+
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog({ isOpen: false, message: '', onConfirm: null })}
+      />
     </div>
   );
 }

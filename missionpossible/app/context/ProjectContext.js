@@ -4,12 +4,14 @@ import { createContext, useContext, useState, useEffect } from "react";
 import { collection, addDoc, updateDoc, deleteDoc, onSnapshot, doc, query, where, getDocs, writeBatch, getDoc } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 import { useUser } from "./UserContext";
+import { useNotifications } from "./NotificationContext";
 
 const ProjectContext = createContext();
 
 export function ProjectProvider({ children }) {
   const [projects, setProjects] = useState([]);
   const { user } = useUser();
+  const { addNotification } = useNotifications();
 
   useEffect(() => {
     const q = query(collection(db, "projects"));
@@ -25,37 +27,34 @@ export function ProjectProvider({ children }) {
   }, []);
 
   const notifyProjectMembers = async (project, action, leavingMember = null) => {
-    if (!user || !project) return;
-    
-    try {
-      const usersToNotify = new Set(project.members || []);
-      usersToNotify.delete(user.email); 
+    const recipientEmails = new Set(project.members || []);
+    let message = '';
+    switch (action) {
+      case 'created':
+        message = 'utworzony';
+        break;
+      case 'updated':
+        message = 'zaktualizowany';
+        break;
+      case 'deleted':
+        message = 'usunięty';
+        break;
+      case 'member_left':
+        message = `opuszczony przez ${leavingMember}`;
+        break;
+      default:
+        message = action;
+    }
 
-      const messages = {
-        created: 'został utworzony',
-        updated: 'został zaktualizowany',
-        deleted: 'został usunięty',
-        member_added: 'otrzymał nowego członka',
-        member_removed: 'utracił członka',
-        member_left: `został opuszczony przez ${leavingMember || user.email}`,
-        task_added: 'otrzymał nowe zadanie',
-        task_updated: 'ma zaktualizowane zadanie'
-      };
-
-      for (const recipientEmail of usersToNotify) {
-        await addDoc(collection(db, 'notifications'), {
-          userId: recipientEmail,
-          projectId: project.id,
-          type: 'project',
-          title: `Aktualizacja projektu: ${project.name}`,
-          message: `Projekt ${messages[action]}`,
-          timestamp: new Date().toISOString(),
-          read: false,
-          priority: 'normal'
-        });
-      }
-    } catch (error) {
-      console.error("Error wysyłając projekt powiadomienia:", error);
+    for (const recipientEmail of recipientEmails) {
+      await addNotification({
+        userId: recipientEmail,
+        projectId: project.id,
+        type: 'project',
+        title: `Aktualizacja projektu: ${project.name}`,
+        message: `Projekt został ${message}`,
+        priority: 'normal'
+      });
     }
   };
 
@@ -127,14 +126,57 @@ export function ProjectProvider({ children }) {
       await updateDoc(projectRef, {
         members: updatedMembers
       });
-      await notifyProjectMembers(
-        { ...projectData, id: projectId, members: updatedMembers },
-        'member_left',
-        user.email
-      );
 
+      if (user && user.email) {
+        for (const member of updatedMembers) {
+          if (member) { 
+            await addNotification({
+              userId: member,
+              projectId: projectId,
+              type: 'project',
+              title: `Członek opuścił projekt: ${projectData.name}`,
+              message: `Użytkownik ${user.email} opuścił projekt`,
+              priority: 'normal',
+              timestamp: new Date().toISOString()
+            });
+          }
+        }
+      }
     } catch (error) {
       console.error("Error opuszczając projekt:", error);
+      throw error;
+    }
+  };
+
+  const addProjectMember = async (projectId, memberEmail) => {
+    try {
+      const projectRef = doc(db, 'projects', projectId);
+      const projectDoc = await getDoc(projectRef);
+      
+      if (!projectDoc.exists()) {
+        throw new Error('Projekt nie istnieje');
+      }
+
+      const projectData = projectDoc.data();
+      const updatedMembers = [...(projectData.members || []), memberEmail];
+
+      await updateDoc(projectRef, {
+        members: updatedMembers
+      });
+
+      if (memberEmail) {
+        await addNotification({
+          userId: memberEmail,
+          projectId: projectId,
+          type: 'project',
+          title: 'Nowy członek projektu',
+          message: `Zostałeś dodany do projektu: ${projectData.name}`,
+          priority: 'normal',
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error("Error dodając członka projektu:", error);
       throw error;
     }
   };
@@ -145,7 +187,8 @@ export function ProjectProvider({ children }) {
       addProject, 
       updateProject, 
       deleteProject,
-      leaveProject
+      leaveProject,
+      addProjectMember
     }}>
       {children}
     </ProjectContext.Provider>

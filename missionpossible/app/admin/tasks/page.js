@@ -120,7 +120,8 @@ export default function AdminTasksPage() {
                   {task.sharedWith?.length || 0} użytkowników
                 </td>
                 <td>
-                  <button onClick={() => window.location.href = `/tasks/${task.id}`}>Szczegóły</button>
+                  <button onClick={() => window.location.href = `/tasks/${task.id}`}>Szczegóły</button> 
+                  {/* moze też trzeba bedzie wymienic? */}
                 </td>
               </tr>
             ))}

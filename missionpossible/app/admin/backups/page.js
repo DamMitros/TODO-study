@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useBackup } from '../../context/BackupContext';
 import { useUser } from '../../context/UserContext';
 import { useNotifications } from '../../context/NotificationContext';
+import ConfirmDialog from '../../components/ConfirmDialogs';
 
 export default function AdminBackupsPage() {
   const { user } = useUser();
@@ -11,6 +12,11 @@ export default function AdminBackupsPage() {
   const [backups, setBackups] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState('desc');
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    message: '',
+    onConfirm: null
+  });
   const { addNotification } = useNotifications();
 
   useEffect(() => {
@@ -35,29 +41,45 @@ export default function AdminBackupsPage() {
     }
   };
 
+  const showConfirmDialog = (message, onConfirm) => {
+    setConfirmDialog({
+      isOpen: true,
+      message,
+      onConfirm
+    });
+  };
+
   const handleDeleteBackup = async (backupId) => {
-    if (window.confirm('Czy na pewno chcesz usunąć ten backup?')) {
-      try {
-        await deleteBackup(backupId);
-        await loadBackups();
-        addNotification('Backup został usunięty', 'success');
-      } catch (error) {
-        console.error('Usunięcie backupu nieudane:', error);
-        addNotification('Błąd podczas usuwania backupu', 'error');
+    showConfirmDialog(
+      'Czy na pewno chcesz usunąć ten backup?',
+      async () => {
+        try {
+          await deleteBackup(backupId);
+          await loadBackups();
+          addNotification('Backup został usunięty', 'success');
+        } catch (error) {
+          console.error('Usunięcie backupu nieudane:', error);
+          addNotification('Błąd podczas usuwania backupu', 'error');
+        }
+        setConfirmDialog({ isOpen: false, message: '', onConfirm: null });
       }
-    }
+    );
   };
 
   const handleRestoreBackup = async (backup) => {
-    if (window.confirm('Czy na pewno chcesz przywrócić system z tego backupu? Wszystkie aktualne dane zostaną zastąpione.')) {
-      try {
-        await restoreSystemBackup(backup);
-        addNotification('System został przywrócony z backupu', 'success');
-      } catch (error) {
-        console.error('Przywracanie danych systemu nieudane:', error);
-        addNotification('Błąd podczas przywracania systemu', 'error');
+    showConfirmDialog(
+      'Czy na pewno chcesz przywrócić system z tego backupu? Wszystkie aktualne dane zostaną zastąpione.',
+      async () => {
+        try {
+          await restoreSystemBackup(backup);
+          addNotification('System został przywrócony z backupu', 'success');
+        } catch (error) {
+          console.error('Przywracanie danych systemu nieudane:', error);
+          addNotification('Błąd podczas przywracania systemu', 'error');
+        }
+        setConfirmDialog({ isOpen: false, message: '', onConfirm: null });
       }
-    }
+    );
   };
 
   const filteredBackups = backups
@@ -121,6 +143,13 @@ export default function AdminBackupsPage() {
           </table>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog({ isOpen: false, message: '', onConfirm: null })}
+      />
     </div>
   );
 }
