@@ -5,9 +5,11 @@ import { useState, useEffect } from "react";
 import { collection, getDocs, deleteDoc, doc, addDoc, query, where, orderBy, updateDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import ConfirmDialog from "../../components/ConfirmDialogs";
+import { useRouter} from 'next/navigation';
 
 export default function AdminUsersPage() {
   const { user } = useUser();
+  const router = useRouter();
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
@@ -170,10 +172,10 @@ export default function AdminUsersPage() {
                   {u.isBanned && <span>(Zablokowany)</span>}
                 </td>
                 <td>
-                  <a href={`/admin/users/${u.id}/tasks`}>{u.tasksCount || 0}</a>
+                  <a onClick={() => router.push(`/admin/users/${u.id}/tasks`)}>{u.tasksCount || 0}</a>
                 </td>
                 <td>
-                  <a href={`/admin/users/${u.id}/projects`}>{u.projectsCount || 0}</a>
+                  <a onClick={() => router.push(`/admin/users/${u.id}/projects`)}>{u.projectsCount || 0}</a>
                 </td>
                 <td>
                   {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : "Nigdy"}

@@ -64,16 +64,19 @@ export function TaskProvider({ children }) {
 
   const addTask = async (taskData) => {
     try {
-      await addDoc(collection(db, "tasks"), taskData);
-      addNotification({
+      const docRef = await addDoc(collection(db, "tasks"), taskData);
+      await addNotification({
         userId: user.email, 
         type: 'task',
         title: 'Nowe zadanie',
         message: `Utworzono nowe zadanie: ${taskData.title}`,
         priority: 'normal'
       });
+
+      return docRef.id;
     } catch (error) {
       console.error('Error dodając zadanie:', error);
+      throw error;
     }
   };
 

@@ -111,44 +111,94 @@ export default function TaskDetail() {
   const isOwner = user && task && (task.userId === user.uid || user.isAdmin);
 
   return (
-    <div>
-      <h2>{task.title}</h2>
-      <p><strong>Opis:</strong> {task.description || "Brak opisu"}</p>
-      <p><strong>Miejsce:</strong> {task.location || "Nie podano"}</p>
-      <p><strong>Powtarzalność:</strong> {task.repeat || "Jednorazowe"}</p>
-      <p><strong>Istotność:</strong> {task.importance}</p>
-      <p><strong>Termin:</strong> {task.deadline || "Brak terminu"}</p>
-      <p><strong>Data utworzenia:</strong> {new Date(task.createdAt).toLocaleDateString()}</p>
-      {task.updatedAt && (
-        <p><strong>Data aktualizacji:</strong> {new Date(task.updatedAt).toLocaleDateString()}</p>
-      )}
-      <div>
-        <p><strong>Postęp wykonania:</strong> {task.executionProgress}%</p>
-        <TaskProgressBar progress={task.executionProgress} />
+    <div className="min-h-screen p-6">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 space-y-6">
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{task.title}</h2>
+          
+          <div className="space-y-4">
+            <p className="text-gray-700 dark:text-gray-300">
+              <span className="font-semibold">Opis:</span> {task.description || "Brak opisu"}
+            </p>
+            <p className="text-gray-700 dark:text-gray-300">
+              <span className="font-semibold">Miejsce:</span> {task.location || "Nie podano"}
+            </p>
+            <p className="text-gray-700 dark:text-gray-300">
+              <span className="font-semibold">Powtarzalność:</span> {task.repeat || "Jednorazowe"}
+            </p>
+            <p className="text-gray-700 dark:text-gray-300">
+              <span className="font-semibold">Istotność:</span> {task.importance}
+            </p>
+            <p className="text-gray-700 dark:text-gray-300">
+              <span className="font-semibold">Termin:</span> {task.deadline || "Brak terminu"}
+            </p>
+            
+            <div className="space-y-2">
+              <p className="text-gray-700 dark:text-gray-300">
+                <span className="font-semibold">Postęp wykonania:</span> {task.executionProgress}%
+              </p>
+              <TaskProgressBar progress={task.executionProgress} />
+            </div>
+
+            <div className="pt-4 space-y-2">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Utworzono: {new Date(task.createdAt).toLocaleDateString()}
+              </p>
+              {task.updatedAt && (
+                <p className="text-sm text-gray-600 dark:text-gray-400">Zaktualizowano: {new Date(task.updatedAt).toLocaleDateString()}</p>
+              )}
+              {task.completedAt && (
+                <p className="text-sm text-gray-600 dark:text-gray-400">Wykonano: {new Date(task.completedAt).toLocaleDateString()}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-4 pt-6">
+            <button 
+              onClick={handleToggleCompletion}
+              className={`px-4 py-2 rounded-lg transition-colors duration-200 ${
+                task.completed
+                  ? 'bg-yellow-600 hover:bg-yellow-700 text-white'
+                  : 'bg-green-600 hover:bg-green-700 text-white'
+              }`}
+            >
+              {task.completed ? 'Oznacz jako niewykonane' : 'Oznacz jako wykonane'}
+            </button>
+            
+            {canEdit && (
+              <>
+                <button onClick={handleEdit} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors duration-200">Edytuj zadanie</button>
+      
+                {isOwner ? (
+                  <button onClick={handleDelete} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200">Usuń zadanie</button>
+                ) : (
+                  <button onClick={handleLeaveTask} className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200">Opuść zadanie</button>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-xl shadow-lg h-[calc(100vh-12rem)] flex flex-col">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Moje notatki</h3>
+          </div>
+          <div className="flex-grow overflow-y-auto p-4">
+            <NoteProvider>
+              <PersonalNotes entityId={task.id} entityType="task" />
+            </NoteProvider>
+          </div>
+        </div>
+
+        <div className="lg:col-span-3 bg-white dark:bg-gray-800 rounded-xl shadow-lg">
+          <div className="p-6">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-6">Komentarze</h3>
+            <CommentProvider>
+              <TaskComments taskId={task.id} />
+            </CommentProvider>
+          </div>
+        </div>
       </div>
-      <br />
-      <button onClick={handleToggleCompletion}>
-        {task.completed ? 'Oznacz jako niewykonane' : 'Oznacz jako wykonane'}
-      </button>
-      {task.completedAt && (
-        <p><strong>Wykonano:</strong> {new Date(task.completedAt).toLocaleDateString()}</p>
-      )}
-      {canEdit && (
-        <>
-          <button onClick={handleEdit}>Edytuj zadanie</button>
-          {isOwner ? (
-            <button onClick={handleDelete}>Usuń zadanie</button>
-          ) : (
-            <button onClick={handleLeaveTask}>Opuść zadanie</button>
-          )}
-        </>
-      )}
-      <CommentProvider>
-        <TaskComments taskId={task.id} />
-      </CommentProvider>
-      <NoteProvider>
-        <PersonalNotes entityId={task.id} entityType="task" />
-      </NoteProvider>
 
       <ConfirmDialog
         isOpen={confirmDialog.isOpen}

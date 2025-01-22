@@ -48,7 +48,7 @@ export default function EditTaskPage() {
 
   return (
     <div>
-      <h1>Edycja zadania</h1>
+      <h1 className="text-4xl font-bold text-center bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-transparent bg-clip-text animate-gradient-x transition-all duration-300">Edycja zadania</h1>
       <TaskEditForm 
         task={task} 
         onCancelEdit={handleCancelEdit}

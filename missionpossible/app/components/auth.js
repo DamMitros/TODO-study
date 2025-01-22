@@ -1,4 +1,4 @@
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification, signInWithPopup, GoogleAuthProvider,} from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, fetchSignInMethodsForEmail, linkWithCredential } from "firebase/auth";
 import { auth, db } from "../../firebaseConfig";
 import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 
@@ -69,6 +69,41 @@ export const loginWithGoogle = async () => {
     return userCredential.user;
   } catch (error) {
     console.error("Błąd podczas logowania za pomocą Google", error);
+    throw error;
+  }
+};
+
+export const loginWithFacebook = async () => {
+  try {
+    const provider = new FacebookAuthProvider();
+    try {
+      const userCredential = await signInWithPopup(auth, provider);
+      await createUserDocument(userCredential.user);
+      await updateLoginTimestamp(userCredential.user);
+      return userCredential.user;
+    } catch (error) {
+      if (error.code === 'auth/account-exists-with-different-credential') {
+        const email = error.customData.email;
+        const methods = await fetchSignInMethodsForEmail(auth, email);
+        
+        if (methods.includes('google.com')) {
+          const googleProvider = new GoogleAuthProvider();
+          const result = await signInWithPopup(auth, googleProvider);
+          if (error.credential) {
+            await linkWithCredential(result.user, error.credential);
+          }
+          
+          await updateLoginTimestamp(result.user);
+          return result.user;
+        } else if (methods.includes('password')) {
+          throw new Error('To konto jest już zarejestrowane przy użyciu emaila i hasła. Proszę zalogować się używając emaila i hasła.');
+        }
+      }
+      console.error("Błąd podczas logowania za pomocą Facebook", error);
+      throw error;
+    }
+  } catch (error) {
+    console.error("Błąd podczas logowania za pomocą Facebook", error);
     throw error;
   }
 };

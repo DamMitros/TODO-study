@@ -4,6 +4,7 @@ import { useTasks } from "../../context/TaskContext";
 import { useUser } from "../../context/UserContext";
 import { useState, useEffect } from "react";
 import { useProjects } from "../../context/ProjectContext";
+import { useRouter } from "next/navigation";
 
 export default function AdminTasksPage() {
   const { getAllTasks } = useTasks(); 
@@ -13,6 +14,7 @@ export default function AdminTasksPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortDirection, setSortDirection] = useState("desc");
+  const router = useRouter();
 
   useEffect(() => {
     if (!user?.isAdmin) return;
@@ -120,8 +122,7 @@ export default function AdminTasksPage() {
                   {task.sharedWith?.length || 0} użytkowników
                 </td>
                 <td>
-                  <button onClick={() => window.location.href = `/tasks/${task.id}`}>Szczegóły</button> 
-                  {/* moze też trzeba bedzie wymienic? */}
+                  <button onClick={() => router.push(`/tasks/${task.id}`)}>Szczegóły</button>
                 </td>
               </tr>
             ))}

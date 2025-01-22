@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useProjects } from '../../../../context/ProjectContext';
 import { useUser } from '../../../../context/UserContext';
 
@@ -8,6 +8,7 @@ export default function UserProjectsPage() {
   const { projects } = useProjects();
   const { user } = useUser();
   const params = useParams();
+  const router = useRouter();
   const userId = params.id;
 
   if (!user?.isAdmin) {
@@ -25,7 +26,7 @@ export default function UserProjectsPage() {
             <h3>{project.name}</h3>
             <p>Data utworzenia: {new Date(project.createdAt).toLocaleDateString()}</p>
             <p>Liczba członków: {project.members?.length || 0}</p>
-            <a href={`/myprojects#${project.id}`}>Zobacz szczegóły</a>
+            <button onClick={() => router.push(`/myprojects/${project.id}`)}>Zobacz szczegóły</button>
           </div>
         ))}
       </div>

@@ -1,47 +1,57 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react"; 
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { useTasks } from "../context/TaskContext";
 import { useUser } from "../context/UserContext";
 import { useProjects } from "../context/ProjectContext";
+import { useRouter } from "next/navigation";
 
 export default function TaskForm() {
   const { addTask } = useTasks();
   const { user } = useUser();
   const { projects } = useProjects();
-  const [dateRange, setDateRange] = useState(false);
+  const router = useRouter();
   const [sharedWithEmail, setSharedWithEmail] = useState('');
   const [notification, setNotification] = useState(null);
-  const showNotification = useCallback((message, type) => {
+  const titleInputRef = useRef(null);
+  const sharedEmailInputRef = useRef(null);
+
+  const showNotification = (message, type) => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 5000);
-  }, []);
+  };
 
   const handleSubmit = async (values) => {
     try {
-      const task = {
-        title: values.title,
-        description: values.description,
-        location: values.location || "",
-        repeat: values.repeat || "",
+      let sharedWithUsers = [...values.sharedWith];
+      if (values.projectId) {
+        const selectedProject = projects.find(p => p.id === values.projectId);
+        if (selectedProject && selectedProject.members) {
+          sharedWithUsers = [...new Set([
+            ...sharedWithUsers,
+            ...selectedProject.members.filter(member => member !== user.email)
+          ])];
+        }
+      }
+
+      const taskData = {
+        ...values,
         userId: user.uid,
-        importance: Number(values.importance),
-        deadline: values.deadline,
-        completed: false,  
-        executionProgress: 0,
         createdAt: new Date().toISOString(),
-        sharedWith: values.sharedWith || [],
-        projectId: values.projectId || ""
+        updatedAt: new Date().toISOString(),
+        completed: false,
+        completedAt: null,
+        sharedWith: sharedWithUsers,
       };
-      await addTask(task);
-      formik.resetForm();
-      setSharedWithEmail('');
+
+      const taskId = await addTask(taskData);
       showNotification("Zadanie zostało utworzone", "success");
+      router.push(`/tasks/${taskId}`);
     } catch (error) {
-      console.error("Error przy dodawaniu zadania:", error);
       showNotification("Wystąpił błąd podczas tworzenia zadania", "error");
+      titleInputRef.current?.focus();
     }
   };
 
@@ -53,8 +63,6 @@ export default function TaskForm() {
       repeat: "",
       importance: 1,
       deadline: "",
-      deadlineStart: "",
-      deadlineEnd: "",
       completed: false,
       completedAt: null,
       executionProgress: 0,
@@ -67,16 +75,7 @@ export default function TaskForm() {
       location: Yup.string(),
       repeat: Yup.string(),
       importance: Yup.number().min(1).max(5).required("Istotność jest wymagana"),
-      deadline: dateRange 
-        ? Yup.string().test(
-            "both-dates",
-            "Obie daty są wymagane",
-            function (value) {
-              const { deadlineStart, deadlineEnd } = this.parent;
-              return dateRange ? deadlineStart && deadlineEnd : true;
-            }
-          )
-        : Yup.date(),
+      deadline: Yup.date(),
       executionProgress: Yup.number()
         .required("Postęp wykonania jest wymagany")
         .min(0, "Minimum to 0%")
@@ -88,19 +87,16 @@ export default function TaskForm() {
   });
 
   const handleShare = useCallback(async () => {
-    if (!sharedWithEmail) return;
+    if (!sharedWithEmail) {
+      sharedEmailInputRef.current?.focus();
+      return;
+    }
 
     if (formik.values.projectId) {
       const selectedProject = projects.find(p => p.id === formik.values.projectId);
       if (selectedProject) {
         if (selectedProject.members.includes(sharedWithEmail)) {
-          showNotification(
-            "Ta osoba jest już członkiem projektu i automatycznie będzie miała dostęp do zadania.",
-            "info"
-          );
-          if (!formik.values.sharedWith.includes(sharedWithEmail)) {
-            formik.setFieldValue('sharedWith', [...formik.values.sharedWith, sharedWithEmail]);
-          }
+          showNotification("Ta osoba jest już członkiem projektu i automatycznie będzie miała dostęp do zadania.", "info");
           setSharedWithEmail('');
           return;
         }
@@ -111,154 +107,128 @@ export default function TaskForm() {
       formik.setFieldValue('sharedWith', [...formik.values.sharedWith, sharedWithEmail]);
     }
     setSharedWithEmail('');
-  }, [sharedWithEmail, formik.values.projectId, formik.values.sharedWith, projects, showNotification]);
+    sharedEmailInputRef.current?.focus();
+  }, [sharedWithEmail, formik.values.projectId, formik.values.sharedWith, projects]);
 
   if (!user) {
     return <p>Musisz być zalogowany, aby dodać nowe zadanie.</p>;
   }
 
   return (
-    <form onSubmit={formik.handleSubmit}>
-      <input
-        type="text"
-        name="title"
-        placeholder="Tytuł zadania"
-        onChange={formik.handleChange}
-        onBlur={formik.handleBlur}
-        value={formik.values.title}
-      />
-      {formik.touched.title && formik.errors.title ? <div>{formik.errors.title}</div> : null}
-
-      <textarea
-        name="description"
-        placeholder="Opis zadania"
-        onChange={formik.handleChange}
-        onBlur={formik.handleBlur}
-        value={formik.values.description}
-      />
-
-      <input
-        type="text"
-        name="location"
-        placeholder="Miejsce"
-        onChange={formik.handleChange}
-        onBlur={formik.handleBlur}
-        value={formik.values.location}
-      />
-
-      <select
-        name="repeat"
-        onChange={formik.handleChange}
-        onBlur={formik.handleBlur}
-        value={formik.values.repeat}
-      >
-        <option value="">Wybierz powtarzalność</option>
-        <option value="daily">Codziennie</option>
-        <option value="weekly">Co tydzień</option>
-        <option value="biweekly">Co dwa tygodnie</option>
-        <option value="monthly">Co miesiąc</option>
-        <option value="quarterly">Co kwartał</option>
-        <option value="yearly">Co rok</option>
-      </select>
-
-      <input
-        type="number"
-        name="importance"
-        min="1"
-        max="5"
-        onChange={formik.handleChange}
-        onBlur={formik.handleBlur}
-        value={formik.values.importance}
-      />
-
-      <input
-        type="date"
-        name="deadline"
-        onChange={formik.handleChange}
-        onBlur={formik.handleBlur}
-        value={formik.values.deadline}
-      />
-
-      <div>
-        <label>
-          Postęp wykonania (%)
+    <form onSubmit={formik.handleSubmit} className="max-w-2xl mx-auto space-y-6 p-6">
+      <div className="space-y-4">
+        <div>
           <input
-            type="number"
-            name="executionProgress"
-            min="0"
-            max="100"
+            ref={titleInputRef}
+            type="text"
+            name="title"
+            placeholder="Tytuł zadania"
             onChange={formik.handleChange}
             onBlur={formik.handleBlur}
-            value={formik.values.executionProgress} 
+            value={formik.values.title}
+            className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent transition-all duration-200"
           />
-        </label>
-      </div>
-
-      {notification && (
-        <div>
-          {notification.message}
+          {formik.touched.title && formik.errors.title && (
+            <p className="mt-2 text-sm text-red-600 dark:text-red-400">{formik.errors.title}</p>
+          )}
         </div>
-      )}
 
-      <div>
-        <h3>Projekt</h3>
-        <select
-          name="projectId"
-          onChange={formik.handleChange}
-          value={formik.values.projectId}
-        >
-          <option value="">Brak projektu</option>
-          {projects
-            .filter(project => 
-              project.createdBy === user.uid || 
-              (project.members && project.members.includes(user.email))
-            )
-            .map(project => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-        </select>
-      </div>
+        <div>
+          <textarea
+            name="description"
+            placeholder="Opis zadania"
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            value={formik.values.description}
+            rows={4}
+            className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent transition-all duration-200 resize-y"
+          />
+        </div>
 
-      <div>
-        <h3>Udostępnij</h3>
         <div>
           <input
-            type="email"
-            placeholder="Email osoby"
-            value={sharedWithEmail}
-            onChange={(e) => setSharedWithEmail(e.target.value)}
+            type="text"
+            name="location"
+            placeholder="Miejsce"
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            value={formik.values.location}
+            className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent transition-all duration-200"
           />
-          <button type="button" onClick={handleShare}>
-            Dodaj
-          </button>
         </div>
 
-        {formik.values.sharedWith.length > 0 && (
-          <div>
-            <h4>Udostępniono dla:</h4>
-            {formik.values.sharedWith.map((email, index) => (
-              <div key={index}>
-                {email}
-                <button
-                  type="button"
-                  onClick={() => {
-                    formik.setFieldValue(
-                      'sharedWith',
-                      formik.values.sharedWith.filter((_, i) => i !== index)
-                    );
-                  }}
-                >
-                  Usuń
-                </button>
-              </div>
+        <div>
+          <select name="projectId" onChange={formik.handleChange} onBlur={formik.handleBlur} value={formik.values.projectId} className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent transition-all duration-200">
+            <option value="">Wybierz projekt</option>
+            {projects.map(project => (
+              <option key={project.id} value={project.id}>{project.name}</option>
             ))}
-          </div>
-        )}
-      </div>
+          </select>
+        </div>
 
-      <button type="submit">Dodaj zadanie</button>
+        <div>
+          <select name="importance" onChange={formik.handleChange} onBlur={formik.handleBlur} value={formik.values.importance} className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent transition-all duration-200">
+            <option value="1">Najniższy</option>
+            <option value="2">Niski</option>
+            <option value="3">Średni</option>
+            <option value="4">Wysoki</option>
+            <option value="5">Krytyczny</option>
+          </select>
+        </div>
+
+        <div>
+          <input
+            type="datetime-local"
+            name="deadline"
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            value={formik.values.deadline}
+            className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent transition-all duration-200"
+          />
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex gap-4">
+            <input
+              ref={sharedEmailInputRef}
+            type="email"
+            type="email"
+            placeholder="Email osoby"
+              type="email"
+            placeholder="Email osoby"
+              value={sharedWithEmail}
+              onChange={(e) => setSharedWithEmail(e.target.value)}
+              placeholder="Email użytkownika do udostępnienia"
+              className="flex-1 px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent transition-all duration-200"
+            />
+            <button type="button" onClick={handleShare} className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors duration-200">Dodaj</button>
+          </div>
+
+          {formik.values.sharedWith.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {formik.values.sharedWith.map((email, index) => (
+                <div key={index} className="flex items-center gap-2 px-3 py-1 bg-indigo-100 dark:bg-indigo-900 rounded-full">
+                  <span className="text-sm text-indigo-800 dark:text-indigo-200">{email}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      formik.setFieldValue(
+                        'sharedWith',
+                        formik.values.sharedWith.filter((_, i) => i !== index)
+                      );
+                    }}
+                    className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200"
+                  >×</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <button type="submit" className="w-full px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl">
+          {formik.isSubmitting ? 'Dodawanie...' : 'Dodaj zadanie'}
+        </button>
+      </div>
     </form>
   );
 }

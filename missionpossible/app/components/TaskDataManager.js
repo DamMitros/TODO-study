@@ -9,6 +9,7 @@ export default function TaskDataManager() {
   const { tasks, addTask } = useTasks();
   const { user } = useUser();
   const [notification, setNotification] = useState(null);
+  const [importStatus, setImportStatus] = useState(null);
   const showNotification = (message, type) => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 3000);
@@ -79,57 +80,98 @@ export default function TaskDataManager() {
     URL.revokeObjectURL(url);
   };
 
-  const handleImport = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
+  const isDuplicateTask = (task, existingTasks) => {
+    return existingTasks.some(existingTask => 
+      existingTask.title.toLowerCase() === task.title.toLowerCase() &&
+      existingTask.description?.toLowerCase() === task.description?.toLowerCase() &&
+      existingTask.userId === user.uid
+    );
+  };
 
-    try {
-      const fileType = file.name.split('.').pop().toLowerCase();
-      const content = await file.text();
-      let importedTasks = [];
-      let duplicateCount = 0;
-
-      switch (fileType) {
-        case 'json':
-          importedTasks = JSON.parse(content);
-          break;
-        case 'csv':
-          importedTasks = parseCSV(content);
-          break;
-        case 'xml':
-          importedTasks = parseXML(content);
-          break;
-        default:
-          throw new Error('Nieobsługiwany format pliku');
+  const handleImport = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,.csv,.xml';
+    
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const validTypes = ['application/json', 'text/csv', 'text/xml', 'application/xml'];
+      const fileExtension = file.name.split('.').pop().toLowerCase();
+      
+      if (!['json', 'csv', 'xml'].includes(fileExtension)) {
+        setImportStatus({
+          type: 'error',
+          message: 'Nieprawidłowy format pliku. Dozwolone formaty: JSON, CSV, XML'
+        });
+        return;
       }
 
-      for (const task of importedTasks) {
-        const isDuplicate = tasks.some(existingTask => 
-          existingTask.userId === user.uid &&
-          existingTask.title === task.title &&
-          existingTask.deadline === task.deadline
+      try {
+        const content = await file.text();
+        let parsedData;
+        switch (fileExtension) {
+          case 'json':
+            try {
+              parsedData = JSON.parse(content);
+              if (!Array.isArray(parsedData)) throw new Error('Invalid JSON structure');
+            } catch (err) {
+              throw new Error('Nieprawidłowa struktura pliku JSON');
+            }
+            break;
+
+          case 'csv':
+            try {
+              parsedData = parseCSV(content);
+              if (!Array.isArray(parsedData)) throw new Error('Invalid CSV structure');
+            } catch (err) {
+              throw new Error('Nieprawidłowa struktura pliku CSV');
+            }
+            break;
+
+          case 'xml':
+            try {
+              parsedData = parseXML(content);
+              if (!Array.isArray(parsedData)) throw new Error('Invalid XML structure');
+            } catch (err) {
+              throw new Error('Nieprawidłowa struktura pliku XML');
+            }
+            break;
+
+          default:
+            throw new Error('Nieobsługiwany format pliku');
+        }
+
+        const requiredFields = ['title']; 
+        const isValidData = parsedData.every(task => 
+          requiredFields.every(field => task.hasOwnProperty(field))
         );
 
-        if (!isDuplicate) {
-          const { id, ...taskWithoutId } = task;
-          const newTask = {
-            ...taskWithoutId,
+        if (!isValidData) {
+          throw new Error('Brakuje wymaganych pól w importowanych zadaniach');
+        }
+
+        const userTasks = tasks.filter(task => task.userId === user.uid);
+        const newTasks = parsedData.filter(task => !isDuplicateTask(task, userTasks));
+        const duplicateCount = parsedData.length - newTasks.length;
+        for (const task of newTasks) {
+          await addTask({
+            ...task,
             userId: user.uid,
             createdAt: new Date().toISOString()
-          };
-          await addTask(newTask);
-        } else {
-          duplicateCount++;
+          });
         }
+
+        setImportStatus({
+          type: 'success',
+          message: `Zaimportowano ${newTasks.length} zadań${duplicateCount > 0 ? `, pominięto ${duplicateCount} duplikatów` : ''}`
+        });
+
+      } catch (error) {
+        setImportStatus({type: 'error', message: error.message || 'Wystąpił błąd podczas importowania pliku'});
       }
-      
-      const message = `Zaimportowano ${importedTasks.length - duplicateCount} zadań` + 
-        (duplicateCount > 0 ? ` (pominięto ${duplicateCount} duplikatów)` : '');
-      showNotification(message, 'success');
-    } catch (err) {
-      showNotification('Błąd podczas importowania zadań: ' + err.message, 'error');
-    }
-    event.target.value = '';
+    };
+    input.click();
   };
 
   const parseCSV = (content) => {
@@ -164,30 +206,50 @@ export default function TaskDataManager() {
   };
 
   return (
-    <div>
-      <h2>Zarządzanie Danymi Zadań</h2>
-      
-      {notification && (
-        <Notification 
-          message={notification.message} 
-          type={notification.type} 
-        />
-      )}
+    <div className="space-y-8">
+      <h3 className="text-2xl font-semibold text-gray-900 dark:text-gray-100"> Zarządzanie zadaniami</h3>
 
-      <div>
-        <h3>Eksport Zadań</h3>
-        <button onClick={exportToJSON}>Eksportuj do JSON</button>
-        <button onClick={exportToCSV}>Eksportuj do CSV</button>
-        <button onClick={exportToXML}>Eksportuj do XML</button>
-      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="space-y-4">
+          <h4 className="text-xl font-medium text-gray-800 dark:text-gray-200"> Eksport Zadań</h4>
+          <div className="flex flex-col gap-4">
+            <button onClick={exportToJSON} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors duration-200"> Eksportuj do JSON</button>
+            <button onClick={exportToCSV} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors duration-200"> Eksportuj do CSV</button>
+            <button onClick={exportToXML} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors duration-200"> Eksportuj do XML</button>
+          </div>
+        </div>
 
-      <div>
-        <h3>Import Zadań</h3>
-        <input
-          type="file"
-          accept=".json,.csv,.xml"
-          onChange={handleImport}
-        />
+        <div className="space-y-4">
+          <h4 className="text-xl font-medium text-gray-800 dark:text-gray-200">Import Zadań </h4>
+          <div className="flex flex-col gap-4">
+            <button onClick={handleImport} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors duration-200 flex items-center justify-center gap-2">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              Importuj zadania
+            </button>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Obsługiwane formaty: JSON, CSV, XML </p>
+          </div>
+
+          {importStatus && (
+            <div className={`mt-4 p-4 rounded-lg flex items-center gap-3 ${
+              importStatus.type === 'success' 
+                ? 'bg-green-50 text-green-800 dark:bg-green-900/50 dark:text-green-200' 
+                : 'bg-red-50 text-red-800 dark:bg-red-900/50 dark:text-red-200'
+            }`}>
+              {importStatus.type === 'success' ? (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              )}
+              <span>{importStatus.message}</span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

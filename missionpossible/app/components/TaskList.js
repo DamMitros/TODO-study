@@ -19,6 +19,17 @@ export default function TaskList() {
   const [searchCategory, setSearchCategory] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [projectFilter, setProjectFilter] = useState('all');
+  const [layoutType, setLayoutType] = useState(() => 
+    localStorage.getItem('taskLayoutPreference') || 'grid'
+  );
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('taskLayoutPreference', layoutType);
+  }, [layoutType]);
 
   const filteredAndSortedTasks = useMemo(() => {
     if (!user) return [];
@@ -86,10 +97,6 @@ export default function TaskList() {
     sortDirection
   ]);
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
   const handleTaskClick = useCallback((taskId) => {
     router.push(`/tasks/${taskId}`);
   }, [router]);
@@ -116,8 +123,8 @@ export default function TaskList() {
   if (!user) {
     return (
       <div>
-        <p>Musisz się zalogować, aby zobaczyć listę zadań.</p>
-        <a href="/login">Przejdź do logowania</a>
+        <p className="text-3xl">Musisz się zalogować, aby zobaczyć listę zadań.</p>
+        <button onClick={() => router.push("/login")} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200">Przejdź do logowania</button>
       </div>
     );
   }
@@ -128,103 +135,134 @@ export default function TaskList() {
   );
 
   return (
-    <div>
-      <h2>Lista zadań</h2>
-      
-      <div>
-        <input
-          type="text"
-          placeholder="Wyszukaj zadania..."
-          value={searchTerm}
-          onChange={handleSearchChange}
-        />
-        
-        <select
-          value={searchCategory}
-          onChange={(e) => setSearchCategory(e.target.value)}
-        >
-          <option value="all">Wszystkie pola</option>
-          <option value="title">Tytuł</option>
-          <option value="description">Opis</option>
-          <option value="location">Lokalizacja</option>
-        </select>
+    <div className="space-y-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md space-y-4">
+        <div className="flex flex-wrap gap-4 items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => setLayoutType('list')}
+              className={`p-2 rounded-lg transition-all duration-200 ${
+                layoutType === 'list'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+              </svg>
+            </button>
+            <button
+              onClick={() => setLayoutType('grid')}
+              className={`p-2 rounded-lg transition-all duration-200 ${
+                layoutType === 'grid'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"/>
+              </svg>
+            </button>
+          </div>
+
+          <div className="flex flex-wrap gap-4">
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-0">
+              <option value="deadline">Termin</option>
+              <option value="importance">Priorytet</option>
+              <option value="title">Nazwa</option>
+            </select>
+
+            <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)} className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-0">
+              <option value="all">Wszystkie priorytety</option>
+              <option value="5">Krytyczny</option>
+              <option value="4">Wysoki</option>
+              <option value="3">Średni</option>
+              <option value="2">Niski</option>
+              <option value="1">Najniższy</option>
+            </select>
+
+            <select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)} className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-0">
+              <option value="all">Wszystkie projekty</option>
+              {userProjects.map(project => (
+                <option key={project.id} value={project.id}>{project.name}</option>
+              ))}
+            </select>
+
+            <button onClick={handleShowCompletedToggle} className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors duration-200">
+              {showCompleted ? 'Pokaż aktywne' : 'Pokaż wykonane'}
+            </button>
+          </div>
+        </div>
+
+        <div className="flex gap-4">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={handleSearchChange}
+            placeholder="Szukaj zadań..."
+            className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-0"
+          />
+          <select value={searchCategory} onChange={(e) => setSearchCategory(e.target.value)} className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-0">
+            <option value="all">Wszystkie kategorie</option>
+            <option value="title">Tytuł</option>
+            <option value="description">Opis</option>
+            <option value="location">Lokalizacja</option>
+          </select>
+        </div>
       </div>
 
-      <div>
-        <select 
-          value={sortBy} 
-          onChange={(e) => setSortBy(e.target.value)}
-        >
-          <option value="deadline">Termin</option>
-          <option value="importance">Istotność</option>
-          <option value="createdAt">Data utworzenia</option>
-          <option value="progress">Postęp wykonania</option>
-        </select>
-
-        <button onClick={handleSortDirectionToggle}>
-          {sortDirection === 'asc' ? '↑' : '↓'}
-        </button>
-
-        <button onClick={handleShowCompletedToggle}>
-          {showCompleted ? 'Pokaż aktywne zadania' : 'Pokaż wykonane zadania'}
-        </button>
-      </div>
-
-      <div>
-        <select
-          value={priorityFilter}
-          onChange={(e) => setPriorityFilter(e.target.value)}
-        >
-          <option value="all">Wszystkie priorytety</option>
-          <option value="5">Krytyczny</option>
-          <option value="4">Wysoki</option>
-          <option value="3">Średni</option>
-          <option value="2">Niski</option>
-          <option value="1">Najniższy</option>
-        </select>
-      </div>
-
-      <div>
-        <select
-          value={projectFilter}
-          onChange={(e) => setProjectFilter(e.target.value)}
-        >
-          <option value="all">Wszystkie projekty</option>
-          {userProjects.map(project => (
-            <option key={project.id} value={project.id}>
-              {project.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {filteredAndSortedTasks.length === 0 ? (
-        <p>
-          {showCompleted ? 'Brak wykonanych zadań!' : 'Nie masz jeszcze zapisanych zadań!'}
-        </p>
-      ) : (
-        <ul>
-          {filteredAndSortedTasks.map((task) => (
-            <li key={task.id}>
-              <div onClick={() => handleTaskClick(task.id)}>
-                <h3>{task.title}</h3>
-                <p>Termin: {task.deadline || "Brak terminu"}</p>
-                <p>Istotność: {task.importance}</p>
-                <p>Status: {task.completed ? "Wykonane" : "Do zrobienia"}</p>
-                {task.completedAt && (
-                  <p>Wykonano: {new Date(task.completedAt).toLocaleDateString()}</p>
+      <div className={`
+        ${layoutType === 'grid' 
+          ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' 
+          : 'space-y-4'
+        }
+      `}>
+        {filteredAndSortedTasks.map(task => (
+          <div
+            key={task.id}
+            onClick={() => handleTaskClick(task.id)}
+            className={`
+              bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg 
+              transition-all duration-200 cursor-pointer
+              ${layoutType === 'grid' ? 'p-6' : 'p-4 flex items-center justify-between'}
+            `}
+          >
+            <div className={layoutType === 'list' ? 'flex items-center space-x-4 flex-1' : ''}>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{task.title}</h3>
+                {layoutType === 'grid' && (
+                  <p className="text-gray-600 dark:text-gray-400 mt-2">{task.description?.slice(0, 100)}...</p>
                 )}
-                <p>Postęp: {task.executionProgress}%</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <span className={`px-2 py-1 rounded-full text-sm ${
+                    task.importance === 5 
+                      ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                      : task.importance === 4
+                      ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                      : task.importance === 3
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                      : task.importance === 2
+                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                      : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                  }`}>
+                    {task.importance}
+                  </span>
+                  {task.deadline && (
+                    <span className="px-2 py-1 rounded-full text-sm bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">{new Date(task.deadline).toLocaleDateString()}</span>
+                  )}
+                </div>
               </div>
-              <button 
-                onClick={(e) => handleToggleComplete(e, task.id)}
-              >
-                {task.completed ? '✓ Wykonane' : '◯ Do zrobienia'}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+              
+              <div className="mt-4 flex items-center space-x-4">
+                <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                  <div className="bg-indigo-600 h-2 rounded-full"style={{ width: `${task.executionProgress}%` }}/>
+                </div>
+                <span className="text-sm text-gray-600 dark:text-gray-400">{task.executionProgress}%</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

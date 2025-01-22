@@ -90,7 +90,15 @@ export default function AdminPanel() {
       onConfirm: async () => {
         try {
           await deleteDoc(doc(db, "users", userId));
-          setUsers(users.filter(u => u.id !== userId));
+          setUsers(prevUsers => {
+            const updatedUsers = prevUsers.filter(u => u.id !== userId);
+            setStats(prevStats => ({
+              ...prevStats,
+              totalUsers: updatedUsers.length
+            }));
+            return updatedUsers;
+          });
+          
         } catch (error) {
           console.error("Błąd podczas usuwania użytkownika:", error);
         }
@@ -104,45 +112,64 @@ export default function AdminPanel() {
   }
 
   return (
-    <div>
-      <h2>Panel Administratora</h2>
-      
-      <div>
-        <h3>Statystyki Systemu</h3>
-        <div>Łączna liczba użytkowników: {stats.totalUsers}</div>
-        <div>Łączna liczba zadań: {stats.totalTasks}</div>
-        <div>Łączna liczba projektów: {stats.totalProjects}</div>
+    <div className="space-y-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div onClick={()=> router.push("/admin/users")} className="bg-gradient-to-br from-indigo-500 to-indigo-600 p-6 rounded-xl shadow-lg">
+          <h3 className="text-xl font-semibold text-white mb-2">Użytkownicy</h3>
+          <p className="text-3xl font-bold text-white">{stats.totalUsers}</p>
+        </div>
+        <div onClick={()=> router.push("/admin/tasks")} className="bg-gradient-to-br from-purple-500 to-purple-600 p-6 rounded-xl shadow-lg">
+          <h3 className="text-xl font-semibold text-white mb-2">Zadania</h3>
+          <p className="text-3xl font-bold text-white">{stats.totalTasks}</p>
+        </div>
+        <div onClick={()=> router.push("/admin/projects")} className="bg-gradient-to-br from-pink-500 to-pink-600 p-6 rounded-xl shadow-lg">
+          <h3 className="text-xl font-semibold text-white mb-2">Projekty</h3>
+          <p className="text-3xl font-bold text-white">{stats.totalProjects}</p>
+        </div>
       </div>
 
-      <div>
-        <h3>Zarządzanie Użytkownikami</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Email</th>
-              <th>Status</th>
-              <th>Zadania</th>
-              <th>Projekty</th>
-              <th>Akcje</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map(u => (
-              <tr key={u.id}>
-                <td>{u.email}</td>
-                <td>{u.isAdmin ? 'Administrator' : 'Użytkownik'}</td>
-                <td>{u.tasksCount || 0}</td>
-                <td>{u.projectsCount || 0}</td>
-                <td>
-                  <button onClick={() => toggleAdminStatus(u.email, u.isAdmin)}>
-                    {u.isAdmin ? 'Usuń Administratora' : 'Nadaj Administratora'}
-                  </button>
-                  <button onClick={() => deleteUser(u.id)}>Usuń Użytkownika</button>
-                </td>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <h3 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-6">Zarządzanie Użytkownikami</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Email</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Akcje</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              {users.map(u => (
+                <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="text-gray-900 dark:text-gray-100">{u.email}</span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      u.isAdmin 
+                        ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
+                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                    }`}>
+                      {u.isAdmin ? 'Administrator' : 'Użytkownik'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => toggleAdminStatus(u.email, u.isAdmin)}
+                        className="px-3 py-1 text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-200 transition-colors"
+                      >
+                        {u.isAdmin ? 'Usuń Administratora' : 'Nadaj Administratora'}
+                      </button>
+                      <button onClick={() => deleteUser(u.id)} className="px-3 py-1 text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 transition-colors">Usuń</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <ConfirmDialog

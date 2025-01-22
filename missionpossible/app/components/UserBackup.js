@@ -26,7 +26,7 @@ export default function UserBackup() {
         });
       }
     } catch (error) {
-      console.error('Backup creation failed:', error);
+      // console.error('Backup stworzenie nieudane:', error);
       addNotification({
         type: 'backup',
         title: 'Błąd kopii zapasowej',
@@ -45,7 +45,7 @@ export default function UserBackup() {
           await restoreBackup(backup);
           addNotification('Dane zostały przywrócone z kopii zapasowej', 'success');
         } catch (error) {
-          console.error('Przywrócenie nieudane:', error);
+          // console.error('Przywrócenie nieudane:', error);
           addNotification('Błąd podczas przywracania danych', 'error');
         }
         setConfirmDialog({ isOpen: false, message: '', onConfirm: null });
@@ -62,7 +62,7 @@ export default function UserBackup() {
           await deleteBackup(backupId);
           addNotification('Kopia zapasowa została usunięta', 'success');
         } catch (error) {
-          console.error('Usuwanie nieudane:', error);
+          // console.error('Usuwanie nieudane:', error);
           addNotification('Błąd podczas usuwania kopii zapasowej', 'error');
         }
         setConfirmDialog({ isOpen: false, message: '', onConfirm: null });
@@ -71,25 +71,28 @@ export default function UserBackup() {
   }, [deleteBackup, addNotification]);
 
   return (
-    <div>
-      <h3>Kopie zapasowe danych</h3>
-      <button onClick={handleCreateBackup}>Utwórz kopię zapasową</button>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Kopie zapasowe danych </h3>
+        <button onClick={handleCreateBackup} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors duration-200 whitespace-nowrap"> Utwórz kopię</button>
+      </div>
       
-      <div>
+      <div className="overflow-y-auto max-h-[500px] pr-2">
         {backups.length === 0 ? (
-          <p>Nie masz jeszcze żadnych kopii zapasowych</p>
+          <p className="text-gray-600 dark:text-gray-400 italic"> Nie masz jeszcze żadnych kopii zapasowych</p>
         ) : (
-          <ul>
+          <ul className="space-y-4">
             {backups.map(backup => (
-              <li key={backup.id}>
-                <div>
-                  <span>Data utworzenia: {new Date(backup.createdAt).toLocaleString()}</span>
-                  <span>Wielkość: {backup.size ? (backup.size / 1024).toFixed(2) : 0} KB</span>
-                </div>
-                <div>
-                  <button onClick={() => downloadBackup(backup)}>Pobierz</button>
-                  <button onClick={() => handleRestore(backup)}>Przywróć</button>
-                  <button onClick={() => handleDelete(backup.id)}>Usuń</button>
+              <li key={backup.id} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="break-all">
+                    <span className="text-gray-700 dark:text-gray-300"> Data utworzenia: {new Date(backup.createdAt).toLocaleString()}</span>
+                  </div>
+                  <div className="flex flex-row items-center justify-end gap-2">
+                    <button onClick={() => downloadBackup(backup)}className="inline-flex items-center px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg min-w-[80px] justify-center transition-colors duration-200">Pobierz</button>
+                    <button onClick={() => handleRestore(backup)} className="inline-flex items-center px-3 py-1 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg min-w-[80px] justify-center transition-colors duration-200"> Przywróć</button>
+                    <button onClick={() => handleDelete(backup.id)} className="inline-flex items-center px-3 py-1 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg min-w-[80px] justify-center transition-colors duration-200">Usuń</button>
+                  </div>
                 </div>
               </li>
             ))}

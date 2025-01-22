@@ -102,52 +102,68 @@ export default function EditProjectPage() {
   }
 
   return (
-    <div>
-      <h1>Edycja projektu</h1>
-      {error && <p>{error}</p>}
+    <div className="max-w-7xl mx-auto p-6 space-y-8">
+      <h1 className="text-3xl font-bold text-center text-indigo-600 dark:text-indigo-400">Edycja projektu</h1>
 
-      <form onSubmit={handleUpdate}>
-        <div>
-          <label>Nazwa projektu:</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Nazwa projektu"
-          />
-        </div>
+      {error && (
+        <div className="bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 p-4 rounded-lg">{error}</div>
+      )}
 
-        <button type="submit">Zapisz zmiany</button>
-        <button type="button" onClick={() => router.push(`/myprojects/${project.id}`)}>
-          Anuluj
-        </button>
-      </form>
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md">
+        <form onSubmit={handleUpdate} className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-gray-700 dark:text-gray-300 font-medium"> Nazwa projektu: </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Nazwa projektu"
+              className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
 
-      <div>
-        <h2>Zarządzanie członkami</h2>
-        <div>
+          <div className="flex gap-4">
+            <button type="submit" className="flex-1 px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200">Zapisz zmiany </button>
+            <button type="button" onClick={() => router.push(`/myprojects/${project.id}`)} className="px-6 py-2 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"> Anuluj</button>
+          </div>
+        </form>
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md space-y-6">
+        <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200">Zarządzanie członkami</h2>
+        
+        <div className="flex gap-4">
           <input
             type="email"
             value={memberEmail}
             onChange={(e) => setMemberEmail(e.target.value)}
             placeholder="Email nowego członka"
+            className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500"
           />
-          <button type="button" onClick={handleAddMember}>Dodaj członka</button>
+          <button type="button" onClick={handleAddMember} className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200"> Dodaj członka </button>
         </div>
 
-        <h3>Obecni członkowie:</h3>
-        <ul>
-          {project.members.map((member, index) => (
-            <li key={index}>
-              {member}
-              {member === project.createdBy && " (Właściciel)"}
-              {member === user.email && " (Ty)"}
-              {member !== project.createdBy && member !== user.email && (
-                <button onClick={() => handleRemoveMember(member)}>Usuń</button>
-              )}
-            </li>
-          ))}
-        </ul>
+        <div className="mt-6">
+          <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-4">Obecni członkowie:</h3>
+          <ul className="space-y-2">
+            {project.members.map((member, index) => (
+              <li key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-700 dark:text-gray-300">{member}</span>
+                  {member === project.createdBy && (
+                    <span className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-full"> Właściciel</span>
+                  )}
+                  {member === user.email && (
+                    <span className="px-2 py-1 text-xs bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-full">Ty</span>
+                  )}
+                </div>
+                {member !== project.createdBy && member !== user.email && (
+                  <button onClick={() => handleRemoveMember(member)} className="px-3 py-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors duration-200">Usuń</button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </div>
   );
