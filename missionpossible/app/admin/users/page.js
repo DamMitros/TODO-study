@@ -2,7 +2,7 @@
 
 import { useUser } from "../../context/UserContext";
 import { useState, useEffect } from "react";
-import { collection, getDocs, deleteDoc, doc, addDoc, query, where, orderBy, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, query, where, orderBy, updateDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import ConfirmDialog from "../../components/ConfirmDialogs";
 import { useRouter} from 'next/navigation';
@@ -14,6 +14,7 @@ export default function AdminUsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [filteredUsers, setFilteredUsers] = useState([]);
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
     message: '',
@@ -61,7 +62,6 @@ export default function AdminUsersPage() {
 
         setUsers(updatedUsers);
       } catch (error) {
-        console.error("Błąd podczas pobierania użytkowników:", error);
         setError("Nie udało się załadować danych użytkowników");
       } finally {
         setLoading(false);
@@ -70,6 +70,21 @@ export default function AdminUsersPage() {
 
     fetchUsers();
   }, [user]);
+
+  useEffect(() => {
+    if (!users) return;
+    
+    const filtered = users.filter(user => {
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        user.email?.toLowerCase().includes(searchLower) ||
+        user.displayName?.toLowerCase().includes(searchLower) ||
+        user.uid?.toLowerCase().includes(searchLower)
+      );
+    });
+    
+    setFilteredUsers(filtered);
+  }, [users, searchTerm]);
 
   const deleteUser = async (userId) => {
     setConfirmDialog({
@@ -101,26 +116,6 @@ export default function AdminUsersPage() {
     }
   };
 
-  const toggleAdminStatus = async (userEmail, currentStatus) => {
-    try {
-      if (currentStatus) {
-        const adminQuery = query(collection(db, "admin"), where("email", "==", userEmail));
-        const adminSnapshot = await getDocs(adminQuery);
-        if (!adminSnapshot.empty) {
-          await deleteDoc(adminSnapshot.docs[0].ref);
-        }
-      } else {
-        await addDoc(collection(db, "admin"), { email: userEmail });
-      }
-      
-      setUsers(users.map(u => 
-        u.email === userEmail ? {...u, isAdmin: !currentStatus} : u
-      ));
-    } catch (error) {
-      console.error("Błąd podczas zmiany statusu administratora:", error);
-    }
-  };
-
   if (!user?.isAdmin) {
     return <p>Odmowa dostępu. Wymagane uprawnienia administratora.</p>;
   }
@@ -133,69 +128,71 @@ export default function AdminUsersPage() {
     return <p>{error}</p>;
   }
 
-  const filteredUsers = users.filter(u =>
-    u.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   return (
-    <div>
-      <h2>Zarządzanie użytkownikami</h2>
-      
-      <div>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Zarządzanie Użytkownikami</h1>
+        
         <input
           type="text"
-          placeholder="Szukaj użytkowników..."
+          placeholder="Wyszukaj użytkowników..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full sm:w-64 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500"
         />
       </div>
 
-      <div>
-        <table>
-          <thead>
-            <tr>
-              <th>Email</th>
-              <th>Status</th>
-              <th>Zadania</th>
-              <th>Projekty</th>
-              <th>Ostatnie logowanie</th>
-              <th>Utworzono</th>
-              <th>Akcje</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredUsers.map(u => (
-              <tr key={u.id}>
-                <td>{u.email}</td>
-                <td>
-                  <span>{u.isAdmin ? "Administrator" : "Użytkownik"}</span>
-                  {u.isBanned && <span>(Zablokowany)</span>}
-                </td>
-                <td>
-                  <a onClick={() => router.push(`/admin/users/${u.id}/tasks`)}>{u.tasksCount || 0}</a>
-                </td>
-                <td>
-                  <a onClick={() => router.push(`/admin/users/${u.id}/projects`)}>{u.projectsCount || 0}</a>
-                </td>
-                <td>
-                  {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : "Nigdy"}
-                </td>
-                <td>
-                  {u.createdAt ? new Date(u.createdAt).toLocaleString() : "N/A"}
-                </td>
-                <td>
-                  <button onClick={() => toggleAdminStatus(u.email, u.isAdmin)}>
-                    {u.isAdmin ? "Usuń Admina" : "Nadaj Admina"}
-                  </button>
-                  <button onClick={() => toggleUserBan(u.id, u.isBanned)}>
-                    {u.isBanned ? "Odblokuj" : "Zablokuj"}
-                  </button>
-                  <button onClick={() => deleteUser(u.id)}>Usuń Użytkownika</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        {loading ? (
+          <div className="text-center py-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600 mx-auto"></div>
+          </div>
+        ) : error ? (
+          <div className="text-red-600 dark:text-red-400 text-center py-4">{error}</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Zadania</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Projekty</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Ostatnie logowanie</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Data utworzenia</th>
+                  <th className="px-12 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Akcje</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {filteredUsers.map((u) => (
+                  <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{u.email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        u.isAdmin 
+                          ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                      }`}>
+                        {u.isAdmin ? "Administrator" : "Użytkownik"}
+                        {u.isBanned && " (Zablokowany)"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400" onClick={() => router.push(`/admin/users/${u.id}/tasks`)}>{u.tasksCount || 0}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400" onClick={() => router.push(`/admin/users/${u.id}/projects`)}>{u.projectsCount || 0}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">{u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : "Nigdy"}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">{u.createdAt ? new Date(u.createdAt).toLocaleString() : "N/A"}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-5">
+                      <button onClick={() => toggleUserBan(u.id, u.isBanned)} className="text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 dark:hover:text-yellow-200">
+                        {u.isBanned ? "Odblokuj" : "Zablokuj"}
+                      </button>
+                      <button onClick={() => deleteUser(u.id)} className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200">Usuń</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       <ConfirmDialog

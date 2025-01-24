@@ -171,6 +171,18 @@ export default function TaskEditForm({ task, onCancelEdit, isOwner }) {
         </div>
 
         <div>
+          <select name="repeat" onChange={formik.handleChange} onBlur={formik.handleBlur} value={formik.values.repeat} className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent transition-all duration-200">
+            <option value="">Wybierz powtarzalność</option>
+            <option value="daily">Codziennie</option>
+            <option value="weekly">Co tydzień</option>
+            <option value="biweekly">Co dwa tygodnie</option>
+            <option value="monthly">Co miesiąc</option>
+            <option value="quarterly">Co kwartał</option>
+            <option value="yearly">Co rok</option>
+          </select>
+        </div>
+
+        <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Postęp wykonania (%)</label>
           <input
             type="number"

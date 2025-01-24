@@ -25,27 +25,38 @@ export default function TaskDetail() {
   const router = useRouter();
   const params = useParams(); 
   const id = params.id; 
-  const { getAllTasks, deleteTask, updateTask, leaveTask, toggleTaskCompletion } = useTasks();
-  const allTasks = getAllTasks();
+  const { getAllTasksAdmin, deleteTask, leaveTask, toggleTaskCompletion } = useTasks();
 
   useEffect(() => {
-    if (id && user) {
-      const foundTask = allTasks.find((t) => t.id === id);
-      if (!foundTask) {
-        // router.push('/tasks');
-        return;
+    const fetchTask = async () => {
+      if (!id || !user) return;
+
+      try {
+        const allTasks = await getAllTasksAdmin();
+        const foundTask = allTasks.find((t) => t.id === id);
+        
+        if (!foundTask) {
+          // router.push('/tasks');
+          return;
+        }
+
+        if (user.isAdmin || 
+            foundTask.userId === user.uid || 
+            (foundTask.sharedWith && foundTask.sharedWith.includes(user.email))) {
+          setTask(foundTask);
+          setCanEdit(true);
+        } else {
+          router.push('/tasks');
+        }
+      } catch (error) {
+        console.error("Błąd podczas pobierania zadania:", error);
+      } finally {
+        setLoading(false);
       }
-      if (user.isAdmin || 
-          foundTask.userId === user.uid || 
-          (foundTask.sharedWith && foundTask.sharedWith.includes(user.email))) {
-        setTask(foundTask);
-        setCanEdit(true);
-      } else {
-        router.push('/tasks');
-      }
-    }
-    setLoading(false);
-  }, [id, allTasks, user, router]);
+    };
+
+    fetchTask();
+  }, [id, user, getAllTasksAdmin, router]);
   
   if (!user) {
     return <p>Wczytywanie danych użytkownika...</p>;

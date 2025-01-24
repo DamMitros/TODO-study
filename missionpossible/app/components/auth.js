@@ -49,13 +49,13 @@ export const loginWithEmail = async (email, password) => {
     const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
     if (userDoc.exists() && userDoc.data().isBanned) {
       await auth.signOut();
-      throw new Error("To konto zostało zablokowane");
+      throw {message: "Twoje konto zostało zablokowane. Skontaktuj się z administratorem."};
     }
     
     await updateLoginTimestamp(userCredential.user);
     return userCredential.user;
   } catch (error) {
-    console.error("Błąd podczas logowania za pomocą email", error);
+    // console.error("Błąd podczas logowania za pomocą email", error);
     throw error;
   }
 };

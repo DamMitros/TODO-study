@@ -23,10 +23,16 @@ export default function CalendarPage() {
   useEffect(() => {
     dispatch({ type: 'SET_LOADING', payload: true });
     
+    if (!user) {
+      dispatch({ type: 'SET_TASKS', payload: [] });
+      router.push('/login');
+      return;
+    }
+    
     if (tasks) {
       const userTasks = tasks.filter(task => 
-        task.userId === user.uid || 
-        (task.sharedWith && task.sharedWith.includes(user.email))
+        (user && task.userId === user.uid) || 
+        (user && task.sharedWith && task.sharedWith.includes(user.email))
       );
       dispatch({ type: 'SET_TASKS', payload: userTasks });
     }

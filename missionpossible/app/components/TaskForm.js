@@ -165,6 +165,18 @@ export default function TaskForm() {
             ))}
           </select>
         </div>
+        
+        <div>
+        <select name="repeat" onChange={formik.handleChange} onBlur={formik.handleBlur} value={formik.values.repeat} className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent transition-all duration-200">
+            <option value="">Wybierz powtarzalność</option>
+            <option value="daily">Codziennie</option>
+            <option value="weekly">Co tydzień</option>
+            <option value="biweekly">Co dwa tygodnie</option>
+            <option value="monthly">Co miesiąc</option>
+            <option value="quarterly">Co kwartał</option>
+            <option value="yearly">Co rok</option>
+          </select>
+        </div>
 
         <div>
           <select name="importance" onChange={formik.handleChange} onBlur={formik.handleBlur} value={formik.values.importance} className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent transition-all duration-200">
@@ -191,11 +203,7 @@ export default function TaskForm() {
           <div className="flex gap-4">
             <input
               ref={sharedEmailInputRef}
-            type="email"
-            type="email"
-            placeholder="Email osoby"
               type="email"
-            placeholder="Email osoby"
               value={sharedWithEmail}
               onChange={(e) => setSharedWithEmail(e.target.value)}
               placeholder="Email użytkownika do udostępnienia"

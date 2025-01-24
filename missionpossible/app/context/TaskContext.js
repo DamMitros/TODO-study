@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useReducer, useEffect } from 'react';
 import { taskReducer } from '../reducers/taskReducer';
-import { collection, query, where, onSnapshot, updateDoc, deleteDoc, addDoc, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, updateDoc, deleteDoc, addDoc, doc, getDoc, getDocs } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useUser } from './UserContext';
 import { useProjects } from './ProjectContext';
@@ -200,6 +200,17 @@ export function TaskProvider({ children }) {
     }
   };
 
+  const getAllTasksAdmin = async () => {
+    const tasksRef = collection(db, "tasks");
+    const tasksSnapshot = await getDocs(tasksRef);
+    const tasks = tasksSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    dispatch({ type: 'SET_TASKS', payload: tasks });
+    return tasks;
+  };
+
   return (
     <TaskContext.Provider value={{
       tasks: state.tasks,
@@ -210,6 +221,7 @@ export function TaskProvider({ children }) {
       toggleTaskCompletion,
       leaveTask,
       getAllTasks: () => state.tasks,
+      getAllTasksAdmin,
       addComment
     }}>
       {children}
