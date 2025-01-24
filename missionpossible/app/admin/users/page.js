@@ -181,7 +181,7 @@ export default function AdminUsersPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400" onClick={() => router.push(`/admin/users/${u.id}/projects`)}>{u.projectsCount || 0}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">{u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : "Nigdy"}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">{u.createdAt ? new Date(u.createdAt).toLocaleString() : "N/A"}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-5">
+                    <td className="px-4 py-4 whitespace-nowrap text-right text-sm space-x-3">
                       <button onClick={() => toggleUserBan(u.id, u.isBanned)} className="text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 dark:hover:text-yellow-200">
                         {u.isBanned ? "Odblokuj" : "Zablokuj"}
                       </button>

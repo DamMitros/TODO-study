@@ -10,10 +10,10 @@ export default function ProfilePage() {
 
   if (!user) {
     return (
-      <p>Wczytywanie danych użytkownika...</p>
-      // <div className="flex justify-center items-center min-h-screen">
-      //   <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>  {/*Świetnie to wyglada| do sprawdzenia!*/}
-      // </div>
+      // <p>Wczytywanie danych użytkownika...</p>
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>  {/*Świetnie to wyglada| do sprawdzenia!*/}
+      </div>
     );
   }
 
@@ -23,9 +23,7 @@ export default function ProfilePage() {
       
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8">
         <p className="text-xl text-gray-700 dark:text-gray-300 mb-4">Witaj na swoim profilu</p>
-        <p className="text-gray-600 dark:text-gray-400 mb-2">
-          Twoje adres email: <span className="font-semibold">{user.email}</span>
-        </p>
+        <p className="text-gray-600 dark:text-gray-400 mb-2">Twoje adres email: <span className="font-semibold">{user.email}</span></p>
         <p className="text-gray-600 dark:text-gray-400">W tej sekcji znajdziesz historię powiadomień oraz możliwość obsługi backupów, import/exportu zadań.</p>
       </div>
 

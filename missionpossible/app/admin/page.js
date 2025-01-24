@@ -129,7 +129,7 @@ export default function AdminPanel() {
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-        <h3 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-6">Zarządzanie Użytkownikami</h3>
+        <h3 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-6">Zarządzanie Statusem Użytkowników</h3>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-gray-700">

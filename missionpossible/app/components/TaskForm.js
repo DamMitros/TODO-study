@@ -18,6 +18,11 @@ export default function TaskForm() {
   const titleInputRef = useRef(null);
   const sharedEmailInputRef = useRef(null);
 
+  const accessibleProjects = projects.filter(project => 
+    project.createdBy === user.uid || 
+    (project.members && project.members.includes(user.email))
+  );
+
   const showNotification = (message, type) => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 5000);
@@ -111,7 +116,11 @@ export default function TaskForm() {
   }, [sharedWithEmail, formik.values.projectId, formik.values.sharedWith, projects]);
 
   if (!user) {
-    return <p>Musisz być zalogowany, aby dodać nowe zadanie.</p>;
+    return (
+    <div className="text-center py-12">
+      <p className="text-lg text-gray-600 dark:text-gray-400 mb-4">Musisz być zalogowany, aby dodać nowe zadanie.</p>
+      <button onClick={() => router.push('/login')} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">Przejdź do logowania</button>
+    </div>);
   }
 
   return (
@@ -158,10 +167,12 @@ export default function TaskForm() {
         </div>
 
         <div>
-          <select name="projectId" onChange={formik.handleChange} onBlur={formik.handleBlur} value={formik.values.projectId} className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent transition-all duration-200">
+          <select id="projectId" name="projectId" value={formik.values.projectId || ''} onChange={formik.handleChange} className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent transition-all duration-200">
             <option value="">Wybierz projekt</option>
-            {projects.map(project => (
-              <option key={project.id} value={project.id}>{project.name}</option>
+            {accessibleProjects.map(project => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
             ))}
           </select>
         </div>
@@ -233,9 +244,11 @@ export default function TaskForm() {
           )}
         </div>
 
-        <button type="submit" className="w-full px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl">
-          {formik.isSubmitting ? 'Dodawanie...' : 'Dodaj zadanie'}
-        </button>
+        <div className="flex gap-4">
+          <button type="button" onClick={() => router.push('/tasks')} className="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl">Anuluj</button>
+          <button type="submit" className="flex-1 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl">{formik.isSubmitting ? 'Dodawanie...' : 'Dodaj zadanie'}</button>
+        </div>
+        
       </div>
     </form>
   );

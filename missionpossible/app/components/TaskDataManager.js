@@ -96,7 +96,6 @@ export default function TaskDataManager() {
     input.onchange = async (e) => {
       const file = e.target.files[0];
       if (!file) return;
-      const validTypes = ['application/json', 'text/csv', 'text/xml', 'application/xml'];
       const fileExtension = file.name.split('.').pop().toLowerCase();
       
       if (!['json', 'csv', 'xml'].includes(fileExtension)) {

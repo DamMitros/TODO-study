@@ -6,6 +6,7 @@ import { useNotes } from '../context/NoteContext';
 export default function PersonalNotes({ entityId, entityType }) {
   const { notes, addNote, deleteNote } = useNotes();
   const [newNote, setNewNote] = useState('');
+  const [error, setError] = useState(null);
 
   const entityNotes = notes.filter(
     note => note.entityId === entityId && note.entityType === entityType
@@ -23,7 +24,8 @@ export default function PersonalNotes({ entityId, entityType }) {
       });
       setNewNote('');
     } catch (error) {
-      console.error('Error dodając notatke:', error);
+      setError('Błąd podczas dodawania notatki');
+      // console.error('Error dodając notatke:', error);
     }
   };
 
@@ -31,12 +33,17 @@ export default function PersonalNotes({ entityId, entityType }) {
     try {
       await deleteNote(noteId);
     } catch (error) {
-      console.error('Error usuwając notatke:', error);
+      setError('Błąd podczas usuwania notatki');
+      // console.error('Error usuwając notatke:', error);
     }
   };
 
   return (
     <div>
+      {error && (
+        <div className="mb-4 p-4 bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200 rounded-lg">{error}</div>
+      )}
+      
       <form onSubmit={handleSubmit}>
         <div className="mb-4">
           <div className="flex gap-4">

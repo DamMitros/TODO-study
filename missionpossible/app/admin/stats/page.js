@@ -166,7 +166,7 @@ export default function AdminStatsPage() {
           <div className="overflow-y-auto max-h-[400px] space-y-4">
             <ul className="space-y-3">
               {stats.projectActivity.map(activity => (
-                <li key={`${activity.notificationId}-${activity.timestamp}`} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all duration-200">
+                <li key={`${activity.notificationId}-${activity.timestamp}`} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-gray-600">
                   <div className="flex justify-between items-start">
                     <div className="flex flex-col">
                       <div className="flex items-center gap-2">

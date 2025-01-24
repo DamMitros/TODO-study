@@ -36,7 +36,6 @@ export default function TaskDetail() {
         const foundTask = allTasks.find((t) => t.id === id);
         
         if (!foundTask) {
-          // router.push('/tasks');
           return;
         }
 

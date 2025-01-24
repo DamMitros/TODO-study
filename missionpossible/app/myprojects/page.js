@@ -16,16 +16,12 @@ export default function ProjectsPage() {
   const [layoutType, setLayoutType] = useState(() => 
     localStorage.getItem('projectLayoutPreference') || 'grid'
   );
-  const [isClient, setIsClient] = useState(false);
+  
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
     message: '',
     onConfirm: null
   });
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   useEffect(() => {
     localStorage.setItem('projectLayoutPreference', layoutType);

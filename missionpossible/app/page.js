@@ -9,12 +9,12 @@ export default function Page() {
   const router = useRouter();
   
   return (
-      <div className="max-w-4xl mx-auto pt-16 pb-12 flex-grow">
+      <div className="max-w-4xl mx-auto pt-12 pb-12 flex-grow">
         <h1 className="text-5xl font-bold text-center mb-8 bg-gradient-to-r from-indigo-600 to-purple-600 text-transparent bg-clip-text">Twój wirtualny planer</h1>
         
         {user && <HomeNotifications />}
         
-        <div className="mt-12 space-y-8">
+        <div className="mt-8 space-y-8">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 transition-all duration-300 hover:shadow-2xl">
             <p className="text-xl text-gray-700 dark:text-gray-300 mb-4 leading-relaxed">Masz za dużo istotnych planów? Nie możesz odnaleźć się w natłoku zadań?</p>
             <p className="text-lg text-gray-600 dark:text-gray-400 leading-relaxed">Witaj w naszym planerze! Dzięki niemu będziesz mógł zapanować nad swoim czasem i zrealizować wszystkie swoje plany.</p>
@@ -37,7 +37,7 @@ export default function Page() {
             </div>
           }
 
-          <div className="text-center mt-8">
+          <div className="text-center mt-6">
             <button onClick={() => user ? router.push("/tasks") : router.push("/login")} className="inline-flex items-center px-8 py-4 text-lg font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors duration-300 transform hover:scale-105">
               {user ? "Przejdź do swoich zadań" : "Zarejestruj się i zacznij planować z nami już teraz"}
             </button>

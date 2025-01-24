@@ -93,7 +93,10 @@ export default function TaskEditForm({ task, onCancelEdit, isOwner }) {
     onSubmit: handleSubmit,
   });
 
-  const currentProject = projects.find(p => p.id === formik.values.projectId);
+  const accessibleProjects = projects.filter(project => 
+    project.createdBy === user.uid || 
+    (project.members && project.members.includes(user.email))
+  );
 
   return (
     <div className="max-w-4xl mx-auto p-6">
@@ -149,7 +152,7 @@ export default function TaskEditForm({ task, onCancelEdit, isOwner }) {
 
         <div className="grid grid-cols-2 gap-6">
           <div>
-            <select name="importance" onChange={formik.handleChange} onBlur={formik.handleBlur} value={formik.values.importance} className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent transition-all duration-200">
+            <select name="importance" onChange={formik.handleChange} onBlur={formik.handleBlur} value={formik.values.importance} className="w-full px-4 py-4 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent transition-all duration-200">
               <option value="1">Najniższy</option>
               <option value="2">Niski</option>
               <option value="3">Średni</option>
@@ -169,6 +172,17 @@ export default function TaskEditForm({ task, onCancelEdit, isOwner }) {
             />
           </div>
         </div>
+        
+        <div>
+          <select id="projectId" name="projectId" value={formik.values.projectId || ''} onChange={formik.handleChange} disabled={!isOwner} className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent transition-all duration-200">
+            <option value="">Wybierz projekt</option>
+            {accessibleProjects.map(project => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
         <div>
           <select name="repeat" onChange={formik.handleChange} onBlur={formik.handleBlur} value={formik.values.repeat} className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent transition-all duration-200">
@@ -183,7 +197,7 @@ export default function TaskEditForm({ task, onCancelEdit, isOwner }) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Postęp wykonania (%)</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Postęp wykonania (%)</label>
           <input
             type="number"
             name="executionProgress"
@@ -231,7 +245,7 @@ export default function TaskEditForm({ task, onCancelEdit, isOwner }) {
           </div>
         )}
 
-        <div className="flex justify-end space-x-4 pt-6">
+        <div className="flex justify-end space-x-4 pt-2">
           <button type="button" onClick={onCancelEdit} className="px-6 py-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors duration-200"> Anuluj</button>
           <button type="submit" className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors duration-200">Zapisz zmiany</button>
         </div>

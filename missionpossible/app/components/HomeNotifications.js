@@ -12,7 +12,7 @@ export default function HomeNotifications() {
     .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); 
 
   return (
-    <div className="max-h-64 overflow-y-auto bg-white dark:bg-gray-800 p-4 rounded-xl shadow-lg mt-8">
+    <div className="max-h-64 overflow-y-auto bg-white dark:bg-gray-800 p-4 rounded-xl shadow-lg mt-6">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold">Nowe powiadomienia ({filteredNotifications.length})</h2>
         <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700">

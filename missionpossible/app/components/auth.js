@@ -26,8 +26,8 @@ export const registerWithEmail = async (email, password) => {
     await createUserDocument(userCredential.user);
     return userCredential.user;
   } catch (error) {
-    console.error("Błąd podczas rejestracji za pomocą email", error);
-    throw error;
+    if (error.code === 'auth/email-already-in-use') {throw {message: "Ten email jest już w użytku."};}
+    throw {message: "Spróbuj ponownie."};
   }
 };
 
@@ -68,6 +68,23 @@ export const loginWithGoogle = async () => {
     await updateLoginTimestamp(userCredential.user);
     return userCredential.user;
   } catch (error) {
+    if (error.code === 'auth/account-exists-with-different-credential') {
+      const email = error.customData.email;
+      const methods = await fetchSignInMethodsForEmail(auth, email);
+      
+      if (methods.includes('facebook.com')) {
+        const facebookProvider = new FacebookAuthProvider();
+        const result = await signInWithPopup(auth, facebookProvider);
+        if (error.credential) {
+          await linkWithCredential(result.user, error.credential);
+        }
+        
+        await updateLoginTimestamp(result.user);
+        return result.user;
+      } else if (methods.includes('password')) {
+        throw new Error('To konto jest już zarejestrowane przy użyciu emaila i hasła. Proszę zalogować się używając emaila i hasła.');
+      }
+    }
     console.error("Błąd podczas logowania za pomocą Google", error);
     throw error;
   }

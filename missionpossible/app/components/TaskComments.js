@@ -12,6 +12,7 @@ export default function TaskComments({ taskId }) {
   const { addNotification } = useNotifications();
   const { getAllTasks } = useTasks();
   const { user } = useUser();
+  const [error, setError] = useState(null);
   const [newComment, setNewComment] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editContent, setEditContent] = useState('');
@@ -43,7 +44,8 @@ export default function TaskComments({ taskId }) {
         taskId
       });
     } catch (error) {
-      console.error('Error dodając komentarz:', error);
+      // console.error('Error dodając komentarz:', error);
+      setError('Błąd podczas dodawania komentarza');
     }
   };
 
@@ -65,7 +67,8 @@ export default function TaskComments({ taskId }) {
       });
       setEditingId(null);
     } catch (error) {
-      console.error('Error edytując komentarz:', error);
+      // console.error('Error edytując komentarz:', error);
+      setError('Błąd podczas edycji komentarza');
     }
   };
 
@@ -83,7 +86,8 @@ export default function TaskComments({ taskId }) {
             taskId
           });
         } catch (error) {
-          console.error('Error usuwając komentarz:', error);
+          // console.error('Error usuwając komentarz:', error);
+          setError('Błąd podczas usuwania komentarza');
         }
         setConfirmDialog({ isOpen: false, message: '', onConfirm: null });
       }
@@ -92,6 +96,10 @@ export default function TaskComments({ taskId }) {
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div className="p-4 bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200 rounded-lg">{error}</div>
+      )}
+      
       <form onSubmit={handleSubmit} className="mb-6">
         <div className="flex gap-4 items-stretch">
           <textarea

@@ -7,7 +7,7 @@ import { useUser } from "../context/UserContext";
 import { useProjects } from "../context/ProjectContext"; 
 
 export default function TaskList() {
-  const { tasks, toggleTaskCompletion } = useTasks();
+  const { tasks } = useTasks();
   const { user } = useUser();
   const { projects } = useProjects(); 
   const router = useRouter();
@@ -101,17 +101,12 @@ export default function TaskList() {
     router.push(`/tasks/${taskId}`);
   }, [router]);
 
-  const handleToggleComplete = useCallback((e, taskId) => {
-    e.stopPropagation(); 
-    toggleTaskCompletion(taskId);
-  }, [toggleTaskCompletion]);
-
   const handleSearchChange = useCallback((e) => {
     setSearchTerm(e.target.value);
   }, []);
 
   const handleSortDirectionToggle = useCallback(() => {
-    setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    setSortDirection(prev => prev === 'desc' ? 'asc' : 'desc');
   }, []);
 
   const handleShowCompletedToggle = useCallback(() => {
@@ -124,7 +119,7 @@ export default function TaskList() {
     return (
       <div>
         <p className="text-3xl">Musisz się zalogować, aby zobaczyć listę zadań.</p>
-        <button onClick={() => router.push("/login")} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200">Przejdź do logowania</button>
+        <button onClick={() => router.push("/login")} className="mt-6 px-6 py-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200">Przejdź do logowania</button>
       </div>
     );
   }
@@ -164,8 +159,12 @@ export default function TaskList() {
               </svg>
             </button>
           </div>
-
+          
           <div className="flex flex-wrap gap-4">
+            <button onClick={handleSortDirectionToggle} className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors duration-200">
+              {sortDirection === 'desc' ? '⭡' : '⭣'}
+            </button>
+              
             <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-0">
               <option value="deadline">Termin</option>
               <option value="importance">Priorytet</option>
