@@ -119,6 +119,7 @@ export default function TaskDetail() {
   };
 
   const isOwner = user && task && (task.userId === user.uid || user.isAdmin);
+  const isAdminMember = user && task && task.sharedWith && task.sharedWith.includes(user.email) && user.isAdmin;
 
   return (
     <div className="min-h-screen p-6">
@@ -180,7 +181,12 @@ export default function TaskDetail() {
                 <button onClick={handleEdit} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors duration-200">Edytuj zadanie</button>
       
                 {isOwner ? (
-                  <button onClick={handleDelete} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200">Usuń zadanie</button>
+                  <>
+                    <button onClick={handleDelete} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200">Usuń zadanie</button>
+                    {isAdminMember && (
+                      <button onClick={handleLeaveTask} className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200">Opuść zadanie</button>
+                    )}
+                  </>
                 ) : (
                   <button onClick={handleLeaveTask} className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200">Opuść zadanie</button>
                 )}

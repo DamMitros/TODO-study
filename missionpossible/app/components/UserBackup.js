@@ -2,12 +2,14 @@
 
 import { useBackup } from '../context/BackupContext';
 import { useNotifications } from '../context/NotificationContext';
+import { useUser } from '../context/UserContext';
 import { useCallback, useState } from 'react';
 import ConfirmDialog from '../components/ConfirmDialogs';
 
 export default function UserBackup() {
   const { backups, createUserBackup, downloadBackup, restoreBackup, deleteBackup } = useBackup();
   const { addNotification } = useNotifications();
+  const { user } = useUser(); 
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
     message: '',
@@ -22,7 +24,8 @@ export default function UserBackup() {
           type: 'backup',
           title: 'Kopia zapasowa',
           message: 'Kopia zapasowa została utworzona pomyślnie',
-          priority: 'normal'
+          priority: 'normal',
+          userId: user?.email
         });
       }
     } catch (error) {
@@ -31,10 +34,11 @@ export default function UserBackup() {
         type: 'backup',
         title: 'Błąd kopii zapasowej',
         message: 'Wystąpił błąd podczas tworzenia kopii zapasowej',
-        priority: 'high'
+        priority: 'high',
+        userId: user?.email 
       });
     }
-  }, [createUserBackup, addNotification]);
+  }, [createUserBackup, addNotification, user]);
 
   const handleRestore = useCallback(async (backup) => {
     setConfirmDialog({
@@ -43,10 +47,22 @@ export default function UserBackup() {
       onConfirm: async () => {
         try {
           await restoreBackup(backup);
-          addNotification('Dane zostały przywrócone z kopii zapasowej', 'success');
+          addNotification({
+            type: 'backup',
+            title: 'Dane przywrócone',
+            message: 'Dane zostały przywrócone z kopii zapasowej',
+            priority: 'normal',
+            userId: user?.email
+          });
         } catch (error) {
           // console.error('Przywrócenie nieudane:', error);
-          addNotification('Błąd podczas przywracania danych', 'error');
+          addNotification({
+            type: 'backup',
+            title: 'Błąd przywracania',
+            message: 'Wystąpił błąd podczas przywracania kopii zapasowej',
+            priority: 'high',
+            userId: user?.email
+          });
         }
         setConfirmDialog({ isOpen: false, message: '', onConfirm: null });
       }
@@ -60,10 +76,22 @@ export default function UserBackup() {
       onConfirm: async () => {
         try {
           await deleteBackup(backupId);
-          addNotification('Kopia zapasowa została usunięta', 'success');
+          addNotification({
+            type: 'backup',
+            title: 'Kopia zapasowa usunięta',
+            message: 'Kopia zapasowa została usunięta',
+            priority: 'normal',
+            userId: user?.email 
+          });
         } catch (error) {
           // console.error('Usuwanie nieudane:', error);
-          addNotification('Błąd podczas usuwania kopii zapasowej', 'error');
+          addNotification({
+            type: 'backup',
+            title: 'Błąd usuwania kopii zapasowej',
+            message: 'Wystąpił błąd podczas usuwania kopii zapasowej',
+            priority: 'high',
+            userId: user?.email
+          });
         }
         setConfirmDialog({ isOpen: false, message: '', onConfirm: null });
       }

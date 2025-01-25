@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useComments } from '../context/CommentContext';
 import { useNotifications } from '../context/NotificationContext';
 import { useTasks } from '../context/TaskContext';
 import { useUser } from '../context/UserContext';
 import ConfirmDialog from '../components/ConfirmDialogs';
+import { getDoc, doc } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
 
 export default function TaskComments({ taskId }) {
   const { comments, addComment, deleteComment, editComment } = useComments();
@@ -16,16 +18,29 @@ export default function TaskComments({ taskId }) {
   const [newComment, setNewComment] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editContent, setEditContent] = useState('');
+  const taskComments = comments.filter(comment => comment.taskId === taskId);
+  const tasks = getAllTasks();
+  const currentTask = tasks.find(task => task.id === taskId);
+  const [ownerEmail, setOwnerEmail] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
     message: '',
     onConfirm: null
   });
 
-  const taskComments = comments.filter(comment => comment.taskId === taskId);
-  const tasks = getAllTasks();
-  const currentTask = tasks.find(task => task.id === taskId);
+  useEffect(() => {
+    const fetchOwnerEmail = async () => {
+      if (currentTask?.userId) {
+        const userDoc = await getDoc(doc(db, "users", currentTask.userId));
+        if (userDoc.exists()) {
+          setOwnerEmail(userDoc.data().email);
+        }
+      }
+    };
+    fetchOwnerEmail();
+  }, [currentTask]);
 
+  const recipientEmails = new Set([ownerEmail, ...(currentTask?.sharedWith || []) ].filter(Boolean));
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!newComment.trim()) return;
@@ -36,15 +51,22 @@ export default function TaskComments({ taskId }) {
         content: newComment.trim(),
         type: 'comment'
       });
+
+      for (const recipientEmail of recipientEmails) {
+        if (recipientEmail && recipientEmail !== user.email) { 
+          await addNotification({
+            type: 'comment',
+            title: 'Nowy komentarz',
+            message: `Dodano nowy komentarz do zadania: ${currentTask?.title}`,
+            taskId,
+            userId: recipientEmail,
+            priority: 'normal'
+          });
+        }
+      }
+
       setNewComment('');
-      addNotification({
-        type: 'comment',
-        title: 'Nowy komentarz',
-        message: `Dodano nowy komentarz do zadania: ${currentTask?.title}`,
-        taskId
-      });
     } catch (error) {
-      // console.error('Error dodając komentarz:', error);
       setError('Błąd podczas dodawania komentarza');
     }
   };
@@ -59,15 +81,21 @@ export default function TaskComments({ taskId }) {
 
     try {
       await editComment(commentId, editContent);
-      addNotification({
-        type: 'comment',
-        title: 'Komentarz edytowany',
-        message: `Edytowano komentarz w zadaniu: ${currentTask?.title}`,
-        taskId
-      });
+
+      for (const recipientEmail of recipientEmails) {
+        if (recipientEmail && recipientEmail !== user.email) { 
+          await addNotification({
+            type: 'comment',
+            title: 'Komentarz edytowany',
+            message: `Edytowano komentarz w zadaniu: ${currentTask?.title}`,
+            taskId,
+            userId: recipientEmail,
+            priority: 'normal'
+          });
+        }
+      }
       setEditingId(null);
     } catch (error) {
-      // console.error('Error edytując komentarz:', error);
       setError('Błąd podczas edycji komentarza');
     }
   };
@@ -79,12 +107,19 @@ export default function TaskComments({ taskId }) {
       onConfirm: async () => {
         try {
           await deleteComment(commentId);
-          addNotification({
-            type: 'comment',
-            title: 'Komentarz usunięty',
-            message: `Usunięto komentarz w zadaniu: ${currentTask?.title}`,
-            taskId
-          });
+
+          for (const recipientEmail of recipientEmails) {
+            if (recipientEmail && recipientEmail !== user.email) { 
+              await addNotification({
+                type: 'comment',
+                title: 'Komentarz usunięty',
+                message: `Usunięto komentarz w zadaniu: ${currentTask?.title}`,
+                taskId,
+                userId: recipientEmail,
+                priority: 'normal'
+              });
+            }
+          }
         } catch (error) {
           // console.error('Error usuwając komentarz:', error);
           setError('Błąd podczas usuwania komentarza');
@@ -99,7 +134,7 @@ export default function TaskComments({ taskId }) {
       {error && (
         <div className="p-4 bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200 rounded-lg">{error}</div>
       )}
-      
+
       <form onSubmit={handleSubmit} className="mb-6">
         <div className="flex gap-4 items-stretch">
           <textarea

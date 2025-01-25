@@ -36,6 +36,10 @@ export function NotificationProvider({ children }) {
               recipientEmails.add(userDoc.data().email);
             }
 
+            const message = daysDiff <= 0 
+              ? `Termin zadania "${task.title}" minął ${Math.abs(daysDiff)} dni temu`
+              : `Zadanie "${task.title}" kończy się za ${daysDiff} dni`;
+
             const notificationPromises = Array.from(recipientEmails).map(recipientEmail => {
               if (!recipientEmail) return null; 
               
@@ -43,8 +47,8 @@ export function NotificationProvider({ children }) {
                 userId: recipientEmail, 
                 taskId: task.id,
                 type: 'deadline',
-                title: `Zbliżający się termin: ${task.title}`,
-                message: `Zadanie "${task.title}" kończy się za ${daysDiff} dni`,
+                title: daysDiff <= 0 ? `Przekroczony termin: ${task.title}` : `Zbliżający się termin: ${task.title}`,
+                message: message,
                 priority: 'high',
                 timestamp: new Date().toISOString(),
                 read: false
@@ -95,6 +99,7 @@ export function NotificationProvider({ children }) {
     try {
       await addDoc(collection(db, 'notifications'), {
         ...notification,
+        userId: notification.userId, 
         timestamp: new Date().toISOString(),
         read: false
       });

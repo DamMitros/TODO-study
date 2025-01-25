@@ -3,13 +3,24 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useTasks } from '../../../../context/TaskContext';
 import { useUser } from '../../../../context/UserContext';
+import { useEffect, useState } from 'react';
 
 export default function UserTasksPage() {
-  const { getAllTasks } = useTasks();
+  const [userTasks, setUserTasks] = useState([]);
+  const { getAllTasksAdmin } = useTasks();
   const { user } = useUser();
   const params = useParams();
   const router = useRouter();
   const userId = params.id;
+
+  useEffect(() => {
+    async function fetchTasks() {
+      const allTasks = await getAllTasksAdmin();
+      const filteredTasks = allTasks.filter(task => task.userId === userId);
+      setUserTasks(filteredTasks);
+    }
+    fetchTasks();
+  }, [getAllTasksAdmin, userId]);
 
   if (!user?.isAdmin) {
     return (
@@ -18,8 +29,6 @@ export default function UserTasksPage() {
       </div>
     );
   }
-
-  const userTasks = getAllTasks().filter(task => task.userId === userId);
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
