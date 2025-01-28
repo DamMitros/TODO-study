@@ -82,10 +82,11 @@ export const loginWithGoogle = async () => {
         await updateLoginTimestamp(result.user);
         return result.user;
       } else if (methods.includes('password')) {
-        throw new Error('To konto jest już zarejestrowane przy użyciu emaila i hasła. Proszę zalogować się używając emaila i hasła.');
+        // throw new Error('To konto jest już zarejestrowane przy użyciu emaila i hasła. Proszę zalogować się używając emaila i hasła.');
+        throw {message: 'To konto jest już zarejestrowane przy użyciu emaila i hasła. Proszę zalogować się używając emaila i hasła.'};
       }
     }
-    console.error("Błąd podczas logowania za pomocą Google", error);
+    // console.error("Błąd podczas logowania za pomocą Google", error);
     throw error;
   }
 };
@@ -113,14 +114,15 @@ export const loginWithFacebook = async () => {
           await updateLoginTimestamp(result.user);
           return result.user;
         } else if (methods.includes('password')) {
-          throw new Error('To konto jest już zarejestrowane przy użyciu emaila i hasła. Proszę zalogować się używając emaila i hasła.');
+          // throw new Error('To konto jest już zarejestrowane przy użyciu emaila i hasła. Proszę zalogować się używając emaila i hasła.');
+          throw {message: 'To konto jest już zarejestrowane przy użyciu emaila i hasła. Proszę zalogować się używając emaila i hasła.'};
         }
       }
-      console.error("Błąd podczas logowania za pomocą Facebook", error);
+      // console.error("Błąd podczas logowania za pomocą Facebook", error);
       throw error;
     }
   } catch (error) {
-    console.error("Błąd podczas logowania za pomocą Facebook", error);
+    // console.error("Błąd podczas logowania za pomocą Facebook", error);
     throw error;
   }
 };

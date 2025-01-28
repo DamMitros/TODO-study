@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useTasks } from '../context/TaskContext';
 import { useUser } from '../context/UserContext';
-import Notification from './Notification';
 
 export default function TaskDataManager() {
   const { tasks, addTask } = useTasks();

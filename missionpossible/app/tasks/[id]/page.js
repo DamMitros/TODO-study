@@ -10,6 +10,9 @@ import PersonalNotes from '../../components/PersonalNotes';
 import { NoteProvider } from '../../context/NoteContext';
 import TaskProgressBar from "../../components/TaskProgressBar";
 import ConfirmDialog from "../../components/ConfirmDialogs";
+import { useProjects } from "../../context/ProjectContext";
+import { getDocs, collection } from "firebase/firestore";
+import { db } from "../../../firebaseConfig";
 
 export default function TaskDetail() {
   const [confirmDialog, setConfirmDialog] = useState({
@@ -21,11 +24,22 @@ export default function TaskDetail() {
   const [canEdit, setCanEdit] = useState(false);
   const [task, setTask] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [users, setUsers] = useState([]);
+  const { projects } = useProjects();
   const { user } = useUser();
   const router = useRouter();
   const params = useParams(); 
   const id = params.id; 
   const { getAllTasksAdmin, deleteTask, leaveTask, toggleTaskCompletion } = useTasks();
+  
+  const fetchUsers = async () => {
+    const usersSnapshot = await getDocs(collection(db, "users"));
+    const usersData = usersSnapshot.docs.map(doc => ({
+      uid: doc.id,
+      ...doc.data()
+    }));
+    setUsers(usersData);
+  };
 
   useEffect(() => {
     const fetchTask = async () => {
@@ -42,6 +56,7 @@ export default function TaskDetail() {
         if (user.isAdmin || 
             foundTask.userId === user.uid || 
             (foundTask.sharedWith && foundTask.sharedWith.includes(user.email))) {
+          fetchUsers();
           setTask(foundTask);
           setCanEdit(true);
         } else {
@@ -141,9 +156,26 @@ export default function TaskDetail() {
               <span className="font-semibold">Istotność:</span> {task.importance}
             </p>
             <p className="text-gray-700 dark:text-gray-300">
-              <span className="font-semibold">Termin:</span> {task.deadline || "Brak terminu"}
+              <span className="font-semibold">Termin:</span> {task.deadline ? new Date(task.deadline).toLocaleDateString() : "Brak terminu"}
             </p>
             
+            {task.sharedWith && task.sharedWith.length > 0 && (
+            <p className="text-gray-700 dark:text-gray-300">
+              <span className="font-semibold">Osoby w zadaniu: </span>
+              {[
+                users.find(u => u.uid === task.userId)?.email,
+                ...(task.sharedWith || [])
+              ].join(", ")}
+            </p>
+            )}
+
+            {task.projectId && (
+            <p className="text-gray-700 dark:text-gray-300">
+              <span className="font-semibold">Nazwa projektu: </span>
+              {task.projectId ? projects.find(p => p.id === task.projectId)?.name || "Nieznaleziony" : "Brak projektu"}
+            </p>              
+            )}
+
             <div className="space-y-2">
               <p className="text-gray-700 dark:text-gray-300">
                 <span className="font-semibold">Postęp wykonania:</span> {task.executionProgress}%
@@ -195,7 +227,7 @@ export default function TaskDetail() {
           </div>
         </div>
 
-        <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-xl shadow-lg h-[calc(100vh-12rem)] flex flex-col">
+        <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-xl shadow-lg h-[calc(100vh-12rem)] flex flex-col h-full">
           <div className="p-4 border-b border-gray-200 dark:border-gray-700">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Moje notatki</h3>
           </div>

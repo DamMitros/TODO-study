@@ -13,15 +13,19 @@ export default function ProjectsPage() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [layoutType, setLayoutType] = useState(() => 
-    localStorage.getItem('projectLayoutPreference') || 'grid'
-  );
-  
+  const [layoutType, setLayoutType] = useState('grid'); 
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
     message: '',
     onConfirm: null
   });
+  
+  useEffect(() => {
+    const savedLayout = localStorage.getItem('projectLayoutPreference');
+    if (savedLayout) {
+      setLayoutType(savedLayout);
+    }
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('projectLayoutPreference', layoutType);

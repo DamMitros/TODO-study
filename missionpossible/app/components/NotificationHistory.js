@@ -5,7 +5,7 @@ import { useState } from 'react';
 
 export default function NotificationHistory() {
   const { notifications, markAsRead } = useNotifications();
-  const [filter, setFilter] = useState('all'); // all, read, unread
+  const [filter, setFilter] = useState('all');
 
   const filteredNotifications = notifications.filter(notification => {
     if (filter === 'read') return notification.read;

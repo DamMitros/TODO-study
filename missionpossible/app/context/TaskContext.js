@@ -5,7 +5,6 @@ import { taskReducer } from '../reducers/taskReducer';
 import { collection, query, where, onSnapshot, updateDoc, deleteDoc, addDoc, doc, getDoc, getDocs } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useUser } from './UserContext';
-import { useProjects } from './ProjectContext';
 import { useNotifications } from './NotificationContext';
 
 const TaskContext = createContext();
@@ -18,7 +17,6 @@ const initialState = {
 export function TaskProvider({ children }) {
   const [state, dispatch] = useReducer(taskReducer, initialState);
   const { user } = useUser();
-  const { projects } = useProjects();
   const { addNotification } = useNotifications();
 
   useEffect(() => {

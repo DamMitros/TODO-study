@@ -19,17 +19,21 @@ export default function TaskList() {
   const [searchCategory, setSearchCategory] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [projectFilter, setProjectFilter] = useState('all');
-  const [layoutType, setLayoutType] = useState(() => 
-    localStorage.getItem('taskLayoutPreference') || 'grid'
-  );
+  const [layoutType, setLayoutType] = useState('grid'); 
 
   useEffect(() => {
     setIsClient(true);
+    const savedLayout = localStorage.getItem('taskLayoutPreference');
+    if (savedLayout) {
+      setLayoutType(savedLayout);
+    }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('taskLayoutPreference', layoutType);
-  }, [layoutType]);
+    if (isClient) {
+      localStorage.setItem('taskLayoutPreference', layoutType);
+    }
+  }, [layoutType, isClient]);
 
   const filteredAndSortedTasks = useMemo(() => {
     if (!user) return [];
