@@ -9,7 +9,7 @@ export default function Page() {
   const router = useRouter();
   
   return (
-      <div className="max-w-4xl mx-auto pt-12 pb-12 flex-grow">
+      <div className="max-w-4xl mx-auto pb-12 flex-grow">
         <h1 className="text-5xl font-bold text-center mb-8 bg-gradient-to-r from-indigo-600 to-purple-600 text-transparent bg-clip-text">Twój wirtualny planer</h1>
         
         {user && <HomeNotifications />}
