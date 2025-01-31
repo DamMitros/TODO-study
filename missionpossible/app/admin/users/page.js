@@ -150,48 +150,46 @@ export default function AdminUsersPage() {
         ) : error ? (
           <div className="text-red-600 dark:text-red-400 text-center py-4">{error}</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Zadania</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Projekty</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Ostatnie logowanie</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Data utworzenia</th>
-                  <th className="px-12 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Akcje</th>
+          <table className="w-full">
+            <thead className="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Email</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Zadania</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Projekty</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Ostatnie logowanie</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Data utworzenia</th>
+                <th className="px-12 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Akcje</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              {filteredUsers.map((u) => (
+                <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{u.email}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      u.isAdmin 
+                        ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
+                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                    }`}>
+                      {u.isAdmin ? "Administrator" : "Użytkownik"}
+                      {u.isBanned && " (Zablokowany)"}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400" onClick={() => router.push(`/admin/users/${u.id}/tasks`)}>{u.tasksCount || 0}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400" onClick={() => router.push(`/admin/users/${u.id}/projects`)}>{u.projectsCount || 0}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">{u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : "Nigdy"}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">{u.createdAt ? new Date(u.createdAt).toLocaleString() : "N/A"}</td>
+                  <td className="px-4 py-4 whitespace-nowrap text-right text-sm space-x-3">
+                    <button onClick={() => toggleUserBan(u.id, u.isBanned)} className="text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 dark:hover:text-yellow-200">
+                      {u.isBanned ? "Odblokuj" : "Zablokuj"}
+                    </button>
+                    <button onClick={() => deleteUser(u.id)} className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200">Usuń</button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {filteredUsers.map((u) => (
-                  <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{u.email}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        u.isAdmin 
-                          ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
-                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                      }`}>
-                        {u.isAdmin ? "Administrator" : "Użytkownik"}
-                        {u.isBanned && " (Zablokowany)"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400" onClick={() => router.push(`/admin/users/${u.id}/tasks`)}>{u.tasksCount || 0}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400" onClick={() => router.push(`/admin/users/${u.id}/projects`)}>{u.projectsCount || 0}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">{u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : "Nigdy"}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">{u.createdAt ? new Date(u.createdAt).toLocaleString() : "N/A"}</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-right text-sm space-x-3">
-                      <button onClick={() => toggleUserBan(u.id, u.isBanned)} className="text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 dark:hover:text-yellow-200">
-                        {u.isBanned ? "Odblokuj" : "Zablokuj"}
-                      </button>
-                      <button onClick={() => deleteUser(u.id)} className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200">Usuń</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
 

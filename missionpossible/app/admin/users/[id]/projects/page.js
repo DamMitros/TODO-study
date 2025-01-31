@@ -34,11 +34,11 @@ export default function UserProjectsPage() {
               <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{project.name}</h3>
               <div className="space-y-2">
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  <span className="font-medium">Data utworzenia:</span>{" "}
+                  <span className="font-medium">Data utworzenia: </span>
                   {new Date(project.createdAt).toLocaleDateString()}
                 </p>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  <span className="font-medium">Liczba członków:</span>{" "}
+                  <span className="font-medium">Liczba członków: </span>
                   {project.members?.length || 0}
                 </p>
               </div>

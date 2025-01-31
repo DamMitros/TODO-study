@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { useUser } from "../context/UserContext";
-import { collection, query, getDocs, doc, updateDoc, deleteDoc, addDoc, where } from "firebase/firestore";
+import { collection, query, getDocs, doc, deleteDoc, addDoc, where } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 import { useRouter } from "next/navigation";
 import ConfirmDialog from "../components/ConfirmDialogs";

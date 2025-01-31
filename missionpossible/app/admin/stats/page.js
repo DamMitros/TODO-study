@@ -25,7 +25,6 @@ export default function AdminStatsPage() {
         const notificationsQuery = query(
           collection(db, "notifications"),
           orderBy("timestamp", "desc"),
-          // limit(100)
         );
         
         const notificationsSnapshot = await getDocs(notificationsQuery);
@@ -72,7 +71,6 @@ export default function AdminStatsPage() {
         const usersQuery = query(
           collection(db, "users"),
           orderBy("lastLoginAt", "desc"),
-          limit(10)
         );
         const usersSnapshot = await getDocs(usersQuery);
         const recentLogins = usersSnapshot.docs.map(doc => ({
